@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,23 +23,13 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using TableDependency.SqlClient.Base.Exceptions;
-using TableDependency.SqlClient.Enumerations;
+using TableDependency.SqlClient.Enums;
 
-namespace TableDependency.SqlClient.Exceptions
-{
-    public class SqlServerVersionNotSupportedException : TableDependencyException
-    {
-        protected internal SqlServerVersionNotSupportedException() 
-            : base("SQL Server version not supported from SqlTableDependency.")
-        {
-        }
+namespace TableDependency.SqlClient.Exceptions;
 
-        protected internal SqlServerVersionNotSupportedException(SqlServerVersion sqlVersion) 
-            : base($"SQL Server {sqlVersion.GetHashCode()} is not supported from SqlTableDependency.")
-        {
-        }
-    }
-}
+public sealed class SqlServerVersionNotSupportedException(SqlServerVersion? sqlVersion = null)
+    : TableDependencyException($"SQL Server {sqlVersion?.ToString() ?? "version"} is not supported from SqlTableDependency.");

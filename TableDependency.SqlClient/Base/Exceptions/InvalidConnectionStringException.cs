@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,18 +23,12 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System;
 
-namespace TableDependency.SqlClient.Base.Exceptions
-{
-    public class InvalidConnectionStringException : TableDependencyException
-    {
-        public InvalidConnectionStringException(string connectionString, Exception innerException = null)
-            : base($"Invalid connection string ({connectionString})", innerException)
-        {
-            
-        }
-    }
-}
+namespace TableDependency.SqlClient.Base.Exceptions;
+
+public sealed class InvalidConnectionStringException(string connectionString, Exception innerException)
+    : TableDependencyException($"Invalid connection string ({connectionString})", innerException);

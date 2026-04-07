@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,81 +23,91 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-using System;
-using System.Configuration;
-using System.Data.SqlClient;
+global using Xunit;
+global using TableDependency.SqlClient.Test.Base;
+global using TableDependency.SqlClient.Test.Fixtures;
+using Microsoft.Data.SqlClient;
 
-namespace TableDependency.SqlClient.Test.Base
+namespace TableDependency.SqlClient.Test.Base;
+
+public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture) : IAsyncLifetime
 {
-    public abstract class SqlTableDependencyBaseTest
+    private readonly DatabaseFixture _databaseFixture = databaseFixture;
+    protected string ConnectionString => _databaseFixture.MsSqlContainerConnectionString;
+
+    protected async Task<bool> AreAllDbObjectDisposedAsync(string naming, CancellationToken ct = default)
     {
-        protected static readonly string ConnectionStringForTestUser = ConfigurationManager.ConnectionStrings["SqlServer2008 Test_User"].ConnectionString;
-        protected static readonly string ConnectionStringForSa = ConfigurationManager.ConnectionStrings["SQLServer2008 sa"].ConnectionString;
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
 
-        protected bool AreAllDbObjectDisposed(string naming)
-        {
-            using (var sqlConnection = new SqlConnection(ConnectionStringForSa))
-            {
-                sqlConnection.Open();
-                using (var sqlCommand = sqlConnection.CreateCommand())
-                {
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE name = N'tr_{naming}_Sender'";
-                    var triggerExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE name = N'tr_{naming}_Sender'";
+        var triggerExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{naming}'";
-                    var contectExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{naming}'";
+        var contractExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_message_types WITH (NOLOCK) WHERE name = N'{naming}_Updated'";
-                    var messageExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_message_types WITH (NOLOCK) WHERE name = N'{naming}_Updated'";
+        var messageExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WHERE name = N'{naming}_Receiver'";
-                    var receiverQueueExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WHERE name = N'{naming}_Receiver'";
+        var receiverQueueExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WHERE name = N'{naming}_Sender'";
-                    var senderQueueExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WHERE name = N'{naming}_Sender'";
+        var senderQueueExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.services WHERE name = N'{naming}_Receiver'";
-                    var serviceExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.services WHERE name = N'{naming}_Receiver'";
+        var serviceExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE name = N'{naming}_QueueActivationSender'";
-                    var procedureExists = Convert.ToInt32(sqlCommand.ExecuteScalar());
+        sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE name = N'{naming}_QueueActivationSender'";
+        var procedureExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
-                    return serviceExists == 0 && senderQueueExists == 0 && receiverQueueExists == 0 & triggerExists == 0 && messageExists == 0 && procedureExists == 0 && contectExists == 0;
-                }
-            }
-        }
+        return serviceExists is 0 && senderQueueExists is 0 && receiverQueueExists is 0 && triggerExists is 0 && messageExists is 0 && procedureExists is 0 && contractExists is 0;
+    }
 
-        protected int CountConversationEndpoints(string naming = null)
-        {
-            using (var sqlConnection = new SqlConnection(ConnectionStringForSa))
-            {
-                sqlConnection.Open();
-                using (var sqlCommand = sqlConnection.CreateCommand())
-                {
-                    sqlCommand.CommandText = "select COUNT(*) from sys.conversation_endpoints WITH (NOLOCK)" + (string.IsNullOrWhiteSpace(naming) ? ";" : $" WHERE [far_service] = '{naming}_Receiver';");
-                    return (int)sqlCommand.ExecuteScalar();
-                }
-            }
-        }
+    protected async Task<int> CountConversationEndpointsAsync(string? naming = null, CancellationToken ct = default)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
 
-        protected byte[] GetBytes(string str, int? lenght = null)
-        {
-            if (str == null) return null;
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = "select COUNT(*) from sys.conversation_endpoints WITH (NOLOCK)" + (string.IsNullOrWhiteSpace(naming) ? ";" : $" WHERE [far_service] = '{naming}_Receiver';");
+        return (int)await sqlCommand.ExecuteScalarAsync(ct);
+    }
 
-            byte[] bytes = lenght.HasValue ? new byte[lenght.Value] : new byte[str.Length * sizeof(char)];
-            Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, str.Length * sizeof(char));
-            return bytes;
-        }
+    protected static byte[] GetBytes(string str, int? length = null)
+    {
+        if (str is null)
+            return null!;
 
-        protected string GetString(byte[] bytes)
-        {
-            if (bytes == null) return null;
+        byte[] bytes = length.HasValue
+            ? new byte[length.Value]
+            : new byte[str.Length * sizeof(char)];
 
-            char[] chars = new char[bytes.Length / sizeof(char)];
-            Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
-            return new string(chars);
-        }
+        Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, str.Length * sizeof(char));
+        return bytes;
+    }
+
+    protected static string GetString(byte[] bytes)
+    {
+        if (bytes is null)
+            return null!;
+
+        char[] chars = new char[bytes.Length / sizeof(char)];
+        Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
+
+        return new string(chars);
+    }
+
+    public virtual ValueTask InitializeAsync()
+        => ValueTask.CompletedTask;
+
+    public virtual ValueTask DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
     }
 }

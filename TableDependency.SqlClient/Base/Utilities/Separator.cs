@@ -1,53 +1,41 @@
 ﻿#region License
+
+// TableDependency, SqlTableDependency
+// Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-using System;
+namespace TableDependency.SqlClient.Base.Utilities;
 
-namespace TableDependency.SqlClient.Base.Utilities
+public sealed class Separator(int startIndex, string separator)
 {
-    public class Separator
-    {
-        private int _currentIndex = 1;
-        private int _startIndex;
-        private string _separator;
+    private int _currentIndex = 1;
+    private readonly int _startIndex = startIndex;
+    private readonly string _separator = separator;
 
-        public Separator(string separator) : this(1, separator)
-        {
-        }
-
-        public Separator(int startIndex, string separator)
-        {
-            _separator = separator;
-            _startIndex = startIndex;
-        }
-
-        public Separator(int startIndex, char separator)
-        {
-            _separator = String.Concat(String.Empty, separator);
-            _startIndex = startIndex;
-        }
-
-        public string GetSeparator()
-        {
-            return _currentIndex++ >= _startIndex ? _separator : String.Empty;
-        }
-
-        public void Reset()
-        {
-            _currentIndex = 1;
-        }
-
-        public void Reset(int startIndex, string separator)
-        {
-            _currentIndex = 1;
-            _separator = separator;
-            _startIndex = startIndex;
-        }
-
-        public void Reset(int startIndex)
-        {
-            _currentIndex = 1;
-            _startIndex = startIndex;
-        }
-    }
+    public string PopSeparator()
+        => _currentIndex++ >= _startIndex
+        ? _separator
+        : string.Empty;
 }

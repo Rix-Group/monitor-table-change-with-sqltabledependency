@@ -1,25 +1,26 @@
 # Monitor and receive notifications on record table change
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/LICENSE) [![NuGet Badge](https://buildstats.info/nuget/SqlTableDependency)](https://www.nuget.org/packages/SqlTableDependency/) [![Released](https://img.shields.io/badge/Released-%20Jan%2020%2C%202020-orange.svg)](#) [![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-RED.svg)](#) [![.NET](https://img.shields.io/badge/.NET%20Framework-%3E%3D%204.5.1-ff69b4.svg)](#) [![.NET Core](https://img.shields.io/badge/.NET%20Core-%3E%3D2.0-yellow.svg)](#)
+![License](https://img.shields.io/badge/License-MIT-blue.svg) ![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-RED.svg) ![.NET](https://img.shields.io/badge/.NET%20-%3E%3D%2010.0.0-ff69b4.svg)
 
 **SqlTableDependency** is a high-level C# component used to audit, monitor and receive notifications on SQL Server's record table changes. 
+
 For any record table change, as insert, update or delete operation, a notification **containing values for the record changed** is delivered to SqlTableDependency. This notification contains insert, update or delete record values.
 
-<img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/Workflow-min.png" />
+![ ](img/Workflow-min.png)
 
 This **table record tracking change** system has the advantage to avoid a select to retrieve updated table record, because the updated table values record is delivered by notification.
 
+This is a fork of [IsNemoEqualTrue/monitor-table-change-with-sqltabledependency](https://github.com/IsNemoEqualTrue/monitor-table-change-with-sqltabledependency), introducing .NET 10+ support, async methods, builder pattern, and persistent objects.
+
 ## Get record table change
-If we want **get alert on record table change** without paying attention to the underlying SQL Server infrastructure then SqlTableDependency's record table change notifications will do that for us. Using notifications, an application can **detect table record change** saving us from having to continuously re-query the database to get new values: for any record table change, SqlTableDependency's event handler get a notification containing modified table record values as well as the INSERT, UPDATE, DELETE operation type executed on database table.
+If we want **get alert on record table change** without paying attention to the underlying SQL Server infrastructure then SqlTableDependency's record table change notifications will do that for us. Using notifications, an application can **detect table record change** saving us from having to continuously re-query the database to get new values. For any record table change, SqlTableDependency's event handler gets a notification containing modified table record values as well as the INSERT, UPDATE, DELETE operation type executed on database table.
 
 As example, let's assume we are interested to receive record table changes for the following database table:
 
-<img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/rsz_table.png" />
+![ ](img/rsz_table.png)
 
-Let's start installing SqlTableDependency using:
+Start by installing SqlTableDependency.
 
-[![Install-Package SqlTableDependency](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NuGetSqlTableDependency.png)](https://www.nuget.org/packages/SqlTableDependency/)
-
-We now define a C# model mapping table columns we are interested: these properties will be populated with the values resulting from any INSERT, DELETE or UPDATE record table change operation. We do not need to specify all table columns but just the ones we are interested:
+We now define a C# model mapping table columns we are interested. These properties will be populated with the values resulting from any INSERT, DELETE or UPDATE record table change operation. We do not need to specify all table columns but just the ones we are interested in.
 
 ```C#
 public class Customer
@@ -29,83 +30,225 @@ public class Customer
  public string Surname { get; set; }
 }
 ```
-Model properties can have different name from table columns. We'll see later how to establish a mapping between model properties and table columns with different name.
 
-Now create SqlTableDependency instance passing the connection string and table name (database table name is necessary only if the C# model has a name that is different from the database table name). Then create an event handler for SqlTableDependency's Changed event:
+Now create a SqlTableDependency instance passing the connection string and  create an event handler for SqlTableDependency's OnChanged event.
 
 ```C#
-public class Program
+public static class Program
 {
- private static string _con = "data source=.; initial catalog=MyDB; integrated security=True";
+    private static string _connectionString = "data source=.; initial catalog=MyDB; integrated security=True";
    
- public static void Main()
- {
-  // The mapper object is used to map model properties 
-  // that do not have a corresponding table column name.
-  // In case all properties of your model have same name 
-  // of table columns, you can avoid to use the mapper.
-  var mapper = new ModelToTableMapper<Customer>();
-  mapper.AddMapping(c => c.Surname, "Second Name");
-  mapper.AddMapping(c => c.Name, "First Name");
+    public static void Main()
+    {
+        await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(_connectionString));
+        dep.OnChanged += OnChanged;
+        await dep.StartAsync();
 
-  // Here - as second parameter - we pass table name: 
-  // this is necessary only if the model name is different from table name 
-  // (in our case we have Customer vs Customers). 
-  // If needed, you can also specifiy schema name.
-  using (var dep = new SqlTableDependency<Customer>(_con, "Customers", mapper: mapper));
-  {
-   dep.OnChanged += Changed;
-   dep.Start();
+        Console.WriteLine("Press a key to exit");
+        Console.ReadKey();
+    }
 
-   Console.WriteLine("Press a key to exit");
-   Console.ReadKey();
+    public static void OnChanged(RecordChangedEventArgs<Customer> e)
+    {
+        var changedEntity = e.Entity;
 
-   dep.Stop();
-  } 
- }
-
- public static void Changed(object sender, RecordChangedEventArgs<Customer> e)
- {
-  var changedEntity = e.Entity;
-      
-  Console.WriteLine("DML operation: " + e.ChangeType);
-  Console.WriteLine("ID: " + changedEntity.Id);
-  Console.WriteLine("Name: " + changedEntity.Name);
-  Console.WriteLine("Surname: " + changedEntity.Surname);
- }
+        Console.WriteLine("DML operation: " + e.ChangeType);
+        Console.WriteLine("ID: " + changedEntity.Id);
+        Console.WriteLine("Name: " + changedEntity.Name);
+        Console.WriteLine("Surname: " + changedEntity.Surname);
+    }
 }
 ```
 
-Done! Now you are ready to receive record table change notifications:
-
-[![Receive SQL server notifications GIF video](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/Receive_notifications_from_Sql_Server_database.gif)](https://www.youtube.com/watch?v=sHJVusS5Qz0)
+Done! Now you are ready to receive record table change notifications.
 
 ### Monitor record table change examples and use cases
-To see SqlTableDependency in action, check the following [online long running test](http://sqltabledependency.somee.com/test). Here, SqlTableDependency is tested continuously using a thread that every five seconds perform an update record table change. SqlTableDependency monitor this record table change and get a notification containing new update record table values.  
 
-Also, here are some examples of applications getting notification on record table change. After downloading the example, please remember to update SqlTableDependency nuget package:
+#### Code First Data Annotations to map model with database table
+```C#
+[Table("Items", Schema = "Transaction")]
+public class Item
+{
+    public Guid TransactionItemId { get; set; }
 
-* [Monitor table change with Blazor](https://github.com/christiandelbianco/blazor-notification-db-record-change): This example uses .NET CORE 3.0 Blazor (server side) to create a single page application that makes real-time update of its content on database record changes.
-* [Monitor table change with WPF and WCF](https://github.com/christiandelbianco/Monitor-table-change-with-WPF-WCF-sqltabledependency): This example shows how to refresh a _DataGrid_ of stock data. The grid will be updated whenever a record table change occurs. The notification event contains new values for the modified table record.
-* [Monitor table change with MVC, SignalR and jQuery](https://github.com/christiandelbianco/monitor-table-change-with-mvc-signalR-jquery-sqltabledependency): This example shows how to refresh a HTML table containing stock values. The HTML table will be updated whenever a record table change occurs. Notification event contains new values for the modified table record.
-* [Monitor table change with MVC, SignalR and Knockout JS](https://github.com/christiandelbianco/monitor-table-change-with-mvc-signalR-knockoutjs-sqltabledependency): This example shows how to refresh client web browsers used to book flight tickets. Those terminals must be updated as soon as the availability change and the Web application must take the initiative of sending this information to clients instead of waiting for the client to request it. 
+    [Column("Description")]
+    public string Desc { get; set; }
+}
+```
 
-This section reports some use case examples:
+#### Explicit database table name
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    schemaName: "dbo",
+    tableName: "Customers");
+```
 
-* [Model and properties with same name of table and columns.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Model-and-properties-with-same-name-of-table-and-columns)
-* [Code First Data Annotations to map model with database table.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Code-First-Data-Annotations-to-map-model-with-database-table)
-* [Explicit database table name.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Explicit-database-table-name)
-* [Custom map between model property and table column using ModelToTableMapper<T>.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Custom-map-between-model-property-and-table-column-using-ModelToTableMapper-T)
-* [Specify for which properties we want receive notification using UpdateOfModel<T> mapper.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Specify-for-which-properties-we-want-receive-notification-using-UpdateOfModel-T--mapper)
-* [Filter notification by change type.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Filter-notification-by-change-type)
-* [Get Errors.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Get-errors)
-* [Logging.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Logging)
-* [Get Status.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Status-change)
-* [Apply filter based on WHERE condition.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Use-case:-Where-filter)
-* [Include old values.](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Include-old-values)
+#### Custom map between model property and table column using ModelToTableMapper<T>
+```C#
+var mapper = new ModelToTableMapper<Customer>()
+    .AddMapping(c => c.Name, "First Name")
+    .AddMapping(c => c.Surname, "Last Name");
 
-### How Track record table change is done
-SqlTableDependency's record change audit, provides the low-level implementation to receive database record table change notifications creating SQL Server triggers, queues and service broker that immediately notifies your application when a record table change happens.
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    mapper: mapper);
+```
+
+#### Specify for which properties we want receive notification using UpdateOfModel<T> mapper
+```C#
+var updateOfModel = new UpdateOfModel<Customer>();
+updateOfModel.Add(i => i.Name);
+
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    updateOf: updateOfModel);
+```
+
+#### Filter notification by change type
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    notifyOn: NotifyOn.Insert);
+```
+
+#### Handle events
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString);
+
+dep.OnChanged += OnChanged;
+dep.OnException += OnException;
+dep.OnStatusChanged += OnStatusChanged;
+
+public void OnChanged(RecordChangedEventArgs<Customer> e)
+    => _ = e.Entity;
+
+private void OnException(ExceptionEventArgs e)
+    => _ = e.Exception;
+
+private void OnStatusChanged(StatusChangedEventArgs e)
+    => _ = e.Status
+```
+
+#### Handle async events
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString);
+
+dep.OnChangedAsync = OnChangedAsync;
+dep.OnExceptionAsync = OnExceptionAsync;
+dep.OnStatusChangedAsync = OnStatusChangedAsync;
+
+public async Task OnChangedAsync(RecordChangedEventArgs<Customer> e)
+    => _ = e.Entity;
+
+private async Task OnExceptionAsync(ExceptionEventArgs e)
+    => _ = e.Exception;
+
+private async Task OnStatusChangedAsync(StatusChangedEventArgs e)
+    => _ = e.Status
+```
+
+#### Logging with ILogger
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    logger: logger);
+```
+
+#### Include old values
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    includeOldValues: true);
+
+dep.OnChanged += OnChanged;
+
+public void OnChanged(RecordChangedEventArgs<Customer> e)
+{
+    var changedEntity = e.Entity;
+    Console.WriteLine("DML operation: " + e.ChangeType);
+    Console.WriteLine("ID: " + changedEntity.Id);
+    Console.WriteLine("Name: " + changedEntity.Name);
+    Console.WriteLine("Surname: " + changedEntity.Surname);
+
+    var oldEntity = e.EntityOldValues;
+    Console.WriteLine("Old ID: " + oldEntity.Id);
+    Console.WriteLine("Old Name: " + oldEntity.Name);
+    Console.WriteLine("Old Surname: " + oldEntity.Surname);
+}
+```
+
+#### Apply filter with LINQ expression
+```C#
+ITableDependencyFilter filter = new SqlTableDependencyFilter<Customer>(p => p.Name == "Josh");
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    filter: filter);
+```
+
+#### Apply filter with custom SQL
+```C#
+public class CustomSqlTableDependencyFilter(string name) : ITableDependencyFilter
+{
+    public string Translate()
+        => $"[Name] = {name}"
+}
+
+#### Persist SQL objects and pickup missed events
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString,
+    persistentId: "persistent");
+```
+
+#### Get all columns of a table with ExpandoObject
+```C#
+await using var dep = await SqlTableDependency<ExpandoObject>.CreateSqlTableDependencyAsync(
+    connectionString);
+```
+
+#### Wait until cancellation or error
+```C#
+await using var dep = await SqlTableDependency<Customer>.CreateSqlTableDependencyAsync(
+    connectionString);
+dep.OnChanged += _ => { };
+await dep.StartAsync(waitForStop: true, ct: ct);
+``` 
+
+#### Create a builder that can be used with dependency injection
+```C#
+internal class MyBuilder
+    : SqlTableDependencyBuilder<Customer>
+{
+    public MyBuilder(IOptions<ConnectionStrings> connectionStrings)
+        : base(connectionStrings.Value.Vensis)
+    {
+        PersistentId = nameof(MyBuilder);
+        // You can set every configure async option here
+    }
+}
+
+services.AddTransient<ITableDependencyBuilder<Customer>, MyBuilder>();
+services.AddTransient<MyService>();
+
+internal class MyService(ILogger<MyService> logger, ITableDependencyBuilder<Customer> builder)
+{
+    private readonly ILogger<MyService> _logger = logger;
+    private readonly ITableDependencyBuilder<Customer> _builder = builder;
+
+    public async Task DoWork(CancellationToken ct)
+    {
+        await using var dep = await _builder.BuildAsync(_logger, ct);
+        dep.OnChanged += _ => { };
+        await dep.StartAsync(ct: ct);
+    }
+}
+```
+
+## How track record table change is done
+SqlTableDependency's record change audit, provides the low-level implementation to receive database record table change notifications by creating SQL Server triggers, queues, and service broker that immediately notifies your application when a record table change happens.
 
 Assuming we want to monitor the Customer table content, we create a SqlTableDependency object specifying the Customer table and the following database objects will be generated:
 * Message types
@@ -113,31 +256,30 @@ Assuming we want to monitor the Customer table content, we create a SqlTableDepe
 * Queue
 * Service Broker
 * Trigger on table to be monitored
-* Stored procedure to clean up the created objects in case the application exits abruptly (that is, when the application terminate without disposing the SqlTableDependency object)
+* Stored procedure to clean up the created objects in case the application exits abruptly (that is, when the application terminate without disposing the SqlTableDependency object and persistent id is not set).
 
-![DatabaseObjects][DatabaseObjects]
+![ ](img/DbObjects-min.png)
 
-[DatabaseObjects]: https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/DbObjects-min.png "Database Object created for send notifications"
+### Watchdog timeout
+The `StartAsync(int timeout = 120, int watchdogTimeout = 180)` method starts the listener to receive record table change notifications.
+The `watchdogTimeout` parameter specifies the amount of time in seconds for the watch dog system.
 
-#### Remark about record table change system
-The `Start(int timeOut = 120, int watchDogTimeOut = 180)` method starts the listener to receive record table change notifications.
-The `watchDogTimeOut` parameter specifies the amount of time in seconds for the watch dog system.
+After calling the `StopAsync()` method, record table change notifications are no longer delivered. Database objects created by SqlTableDependency will be deleted (Trigger, Service Broker, Queue, Contract, Messages type and Stored Procedure) if persistent id is not set.
 
-After calling the `Stop()` method, record table change notifications are not longer delivered. Database objects created by SqlTableDependency will be deleted.
+It is a good practice to use SqlTableDependency with an `await using` statement to run `StopAsync()` automatically within `DisposeAsync()`.
 
-It is a good practice - when possible - wrap SqlTableDependency within a using statement or alternatively in a try catch block: when the application will stop, this is enough to remove the SqlTableDependency infrastructure (Trigger, Service Broker, Queue, Contract, Messages type and Stored Procedure) automatically.
+When the application exits abruptly, the `StopAsync()` and/or `DisposeAsync()` method will not run. We need a way to cleaning up the SqlTableDependency infrastructure. The `StartAsync()` method takes an optional parameter `watchdogTimeout` which defaults to 180 seconds. If there are no listeners waiting for notifications in this time, the SqlTableDependency infrastructure will be removed.
 
-In any case, when the application exits abruptly – that is by not calling the `Stop()` and/or `Dispose()` method - we need a way to cleaning up the SqlTableDependency infrastructure. The `Start()` method takes an optional parameter `watchDogTimeOut`. If there are no listeners waiting for notifications, the SqlTableDependency infrastructure will be removed after this period of time. The default value of `watchDogTimeOut` is 180 seconds.
+Debugging can trigger the watchdog. During development, you often spend several minutes inside the debugger before you move on to the next step. Please make sure to increase `watchdogTimeout` when you debug an application, otherwise you will experience an unexpected destruction of database objects in the middle of your debugging activity.
 
-There is a common scenario that could trigger the watchdog: debugging. During development, you often spend several minutes inside the debugger before you move on to the next step. Please make sure to increase `watchDogTimeOut` when you debug an application, otherwise you will experience an unexpected destruction of database objects in the middle of your debugging activity.
+## Limitations
+This project targets .NET 10 or later versions.
 
-#### ![alt text](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/if_exclamation-red_46014.png) Audit record table change requirements and info
-* SQL Server 2008 R2 or latest versions (**please see note about Compatibility Level and Database Version**).
-* .NET Framewrok 4.5.1 or latest versions / .NET CORE 2.0 or latest versions.
-* When database connection has been lost, there is no way to re-connect SqlTableDependency instance to its queue. A new instance of SqlTableDependency is needed to get record table change notifications again.
-* Windows service using SqlTableDependency **must not goes to SLEEP mode or IDLE state**. Sleep mode blocks SqlTableDependency code and this result in running the database watch dog that drops all SqlTableDependency's db objects (please see https://stackoverflow.com/questions/6302185/how-to-prevent-windows-from-entering-idle-state).
-* Database Backup and Restore: restoring SqlTableDependency's db objects, it does not work.
+When the database connection has been lost, if persistent id is not set, there is no way to re-connect SqlTableDependency instance to its queue and notifications will be missed.
 
+Windows service using SqlTableDependency **must not goes to SLEEP mode or IDLE state**. Sleep mode blocks SqlTableDependency code and this result in running the database watch dog that drops all SqlTableDependency's db objects (please see https://stackoverflow.com/questions/6302185/how-to-prevent-windows-from-entering-idle-state).
+
+### Service broker
 To use notifications, you must be sure to enable Service Broker for the database. To do this run the SQL command:
 ```SQL
 ALTER DATABASE MyDatabase SET ENABLE_BROKER
@@ -157,20 +299,25 @@ In case the user specified in the connection string is not database **Administra
 * VIEW DATABASE STATE
 * VIEW DEFINITION
 
-It is possible skip permissions test done by SqlTableDependency setting `executeUserPermissionCheck` constructor parameter to `false`. Nevertheless a SQL server exception will be thrown if user have not sufficient permissions.
-
-In case you specify SqlTableDependency's QueueExecuteAs property (default value is "SELF"), can also be necessary set TRUSTWORTHY database property using:
+In case you specify SqlTableDependency's QueueExecuteAs property (default value is "SELF"), it can also be necessary set TRUSTWORTHY database property using:
 ```SQL
 ALTER DATABASE MyDatabase SET TRUSTWORTHY ON
 ```
 
-#### ![alt text](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/if_exclamation-red_46014.png) Note about Compatibility Level and Database Version for tracking record changes
-Please, check how David Green solved this problem: https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Contributors 
+### String comparison
+SqlTableDependency does not consider an empty string different from a string containing only spaces; example: '' and '   ' are considered equals. This means that in there is case of an update from '' to '  ' and vice versa, it will not be notified. Same is true for NULL and empty string.
 
-From time to time, I receive bugs reporting issue like "I not detect/receive any record table change notification". Assuming that you are using a logic with enough grants, one of the possible cause of this missing table record change notification, is due to Database compatibility version. Even if your SQL Server instance is SQL Server 2008 R2 or latest versions, can be that your Databasehas been created using an old SQL Server version, for example SQL Server 2005.
+### In-memory OTLP tables
+SqlTableDependency works with traditional disk-based tables, it does not works with In-Memory OLTP tables.
+
+### Compatibility level and database version
+Please, check how David Green solved this problem: https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Contributors
+
+Even if your SQL Server instance is SQL Server 2008 R2 or a later versions, you may face a bug if your Database has been created using an old SQL Server version, for example SQL Server 2005.
+
 To reproduce this issue, you can download Northwind.mdf file and then attach it to your SQL Server 2008 R2 (or greater) instance. Running SqlTableDependency against it, no exception is raised as well as no notification on record table change is detected.
 
-In order to discover your database compatibility version, you can use the following SQL script (see details on http://jongurgul.com/blog/database-created-version-internal-database-version-dbi_createversion/). 
+In order to discover your database compatibility version, you can use the following [SQL script](http://jongurgul.com/blog/database-created-version-internal-database-version-dbi_createversion/). 
 
 ```SQL
 USE <your db>
@@ -195,59 +342,33 @@ END [SQLVersion]
 FROM @DBINFO
 WHERE [Field] IN ('dbi_createversion','dbi_version')
 ```
-Executing this script on Northwind database you get:
+Executing this script on a DB created by SQL Server 2008 R2 instance (database name TableDependencyDB), the result is:
 
-<img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/2018-04-20%20at%2010-40-04.png" />
-
-Executing this script on DB created by SQL Server 2008 R2 instance (database name TableDependencyDB), the result is:
-
-<img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/2018-04-20%20at%2011-51-49.png" />
+![SQL 2008R2](img/2018-04-20%20at%2011-51-49.png)
 
 So, even if your SQL Server instance is 2008 R2 or greater, DB compatibility level (VALUE column) is fundamental to receive record table change notifications.
 
-#### Not supported SQL Server table column types
-Following SQL Server columns types are **not** supported by SqlTableDepdency:
-* XML
-* IMAGE
-* TEXT/NTEXT
-* STRUCTURED
-* GEOGRAPHY
-* GEOMETRY
-* HIERARCHYID
-* SQL_VARIANT
-
-#### Limitations
-SqlTableDependency does not consider an empty string different from a string containing only spaces; example: '' and '   ' are considered eguals. This means that in there is case of update from '' to '  ' - and vice versa - this change it will not be notified. Same is true for NULL and empty string. Please check https://support.microsoft.com/en-us/help/316626/inf-how-sql-server-compares-strings-with-trailing-spaces.
-
-SqlTableDependency works with traditional disk-based tables: it does not works with In-Memory OLTP tables.
-
-#### Difference between SqlTableDependency and SqlDependency from ADO.NET
+## SqlTableDependency vs SqlDependency (ADO.NET)
 Functionalities comparison between Microsoft ADO.NET SqlDependency and SqlTableDependency:
 
-Functionality |SqlTableDependecy | SqlDependency
------------- |------------ | -------------
-View | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" />
-Join multiple tables | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" />
-Where | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" />
-Generic | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification containing updated values | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification containing old values | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification only on insert | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification only on update | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification only on delete | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
-Notification only when specific column is changes | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/YesSmall.png" /> | <img src="https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/img/NoSmall.png" />
+Functionality | SqlTableDependecy | SqlDependency
+------------- | ----------------- | -------------
+View | ![No](img/NoSmall.png) | ![Yes](img/YesSmall.png)
+Join multiple tables | ![No](img/NoSmall.png) | ![Yes](img/YesSmall.png)
+Where | ![Yes](img/YesSmall.png) | ![Yes](img/YesSmall.png)
+Generic | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification containing updated values | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification containing old values | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification only on insert | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification only on update | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification only on delete | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
+Notification only when specific column is changes | ![Yes](img/YesSmall.png) | ![No](img/NoSmall.png)
 
-##### Useful link and tips
+## Useful link and tips
 * https://sqlrus.com/2014/10/compatibility-level-vs-database-version/
 * https://stackoverflow.com/questions/41169144/sqltabledependency-onchange-event-not-fired
 * https://stackoverflow.com/questions/11383145/sql-server-2008-service-broker-tutorial-cannot-receive-the-message-exception
-* Deleting multiple records then inserting using **sql bulk copy**, only deleted change events are raised: to solve this problem, set **SqlBulkCopyOptions.FireTriggers**. Thanks to Ashraf Ghorabi! 
-</details>
+* Deleting multiple records then inserting using **sql bulk copy**, only deleted change events are raised: to solve this problem, set **SqlBulkCopyOptions.FireTriggers**. Thanks to Ashraf Ghorabi!
 
-##### Contributors
-Open-source software (OSS) is a type of computer software in which source code is released under a license in which the copyright holder grants users the rights to study, change, and distribute the software to anyone and for any purpose.Open-source software may be developed in a collaborative public manner. Please, feel free to help and contribute with this project adding your comments, issues or bugs found as well as proposing fix and enhancements. [See contributors](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Contributors).
-
-<div align="center">
-  
-[⬆ Back to top](#monitor-and-receive-notifications-on-record-table-change)  
-</div>
+## Contributors
+Open-source software (OSS) is a type of computer software in which source code is released under a license in which the copyright holder grants users the rights to study, change, and distribute the software to anyone and for any purpose. Open-source software may be developed in a collaborative public manner. Please, feel free to help and contribute with this project adding your comments, issues, or bugs found as well as proposing fix and enhancements. [See contributors for orignal repo](https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Contributors).

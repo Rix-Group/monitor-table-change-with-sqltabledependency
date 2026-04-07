@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,45 +23,46 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using TableDependency.SqlClient.Extensions;
 
-namespace TableDependency.SqlClient.Base.Utilities
+namespace TableDependency.SqlClient.Base.Utilities;
+
+public static class ModelUtil
 {
-    public static class ModelUtil
-    {
-        private static readonly IList<Type> ProcessableModelTypes = new List<Type>
-        {
-            typeof (string),
-            typeof (char),
-            typeof (short), typeof (short?),
-            typeof (int), typeof (int?),
-            typeof (long), typeof (long?),
-            typeof (decimal), typeof (decimal?),
-            typeof (float), typeof (float?),
-            typeof (DateTime), typeof (DateTime?),
-            typeof (DateTimeOffset), typeof (DateTimeOffset?),
-            typeof (TimeSpan),
-            typeof (double), typeof (double?),
-            typeof (bool), typeof (bool?),
-            typeof (byte[]),
-            typeof (char[]),
-            typeof (sbyte),
-            typeof (byte),
-            typeof (Guid),
-            typeof (Enum)
-        };
+    private static readonly IList<Type> ProcessableModelTypes =
+    [
+        typeof(string),
+        typeof(char), typeof(char?),
+        typeof(short), typeof(short?),
+        typeof(int), typeof(int?),
+        typeof(long), typeof(long?),
+        typeof(decimal), typeof(decimal?),
+        typeof(float), typeof(float?),
+        typeof(DateTime), typeof(DateTime?),
+        typeof(DateTimeOffset), typeof(DateTimeOffset?),
+        typeof(TimeSpan), typeof(TimeSpan?),
+        typeof(double), typeof(double?),
+        typeof(bool), typeof(bool?),
+        typeof(byte[]), typeof(byte?[]),
+        typeof(char[]), typeof(char?[]),
+        typeof(sbyte), typeof(sbyte?),
+        typeof(byte), typeof(byte?),
+        typeof(Guid), typeof(Guid?),
+        typeof(Enum)
+    ];
 
-        public static IEnumerable<PropertyInfo> GetModelPropertiesInfo<T>()
-        {
-            return typeof(T)
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.SetField)
-                .Where(propertyInfo => ModelUtil.ProcessableModelTypes.Contains(propertyInfo.PropertyType) || propertyInfo.PropertyType.GetTypeInfo().IsEnum || (propertyInfo.PropertyType.GetTypeInfo().IsGenericType && propertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>)))
-                .ToArray();
-        }
-    }
+    public static IEnumerable<PropertyInfo> GetModelPropertiesInfo<T>()
+        => [.. typeof(T)
+            .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .Where(propertyInfo => propertyInfo.IsPublicOrInternal()
+                && (ProcessableModelTypes.Contains(propertyInfo.PropertyType)
+                    || propertyInfo.PropertyType.GetTypeInfo().IsEnum
+                    || (propertyInfo.PropertyType.GetTypeInfo().IsGenericType && propertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>))))];
 }

@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,16 +23,12 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using TableDependency.SqlClient.Base.Exceptions;
 
-namespace TableDependency.SqlClient.Exceptions
-{
-    public class ServiceBrokerErrorMessageException : TableDependencyException
-    {
-        protected internal ServiceBrokerErrorMessageException(string naming)
-            : base($"Service broker '{naming}' send an error message.")
-        { }
-    }
-}
+namespace TableDependency.SqlClient.Exceptions;
+
+public sealed class ServiceBrokerErrorMessageException(string naming)
+    : TableDependencyException($"Service broker '{naming}' send an error message.");

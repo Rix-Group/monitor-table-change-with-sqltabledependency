@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,20 +23,23 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Resources
+namespace TableDependency.SqlClient.Resources;
+
+public static partial class SqlScripts
 {
-    public static partial class SqlScripts
-    {
-        public const string InformationSchemaColumns = @"SELECT DB_NAME() AS TABLE_CATALOG,
+    public const string InformationSchemaColumns = @"SELECT DB_NAME() AS TABLE_CATALOG,
 SCHEMA_NAME(o.schema_id) AS TABLE_SCHEMA,
 o.name AS TABLE_NAME,
 c.name AS COLUMN_NAME,
+COLUMNPROPERTY(c.object_id, c.name, 'IsIdentity') AS IS_IDENTITY,
+COLUMNPROPERTY(c.object_id, c.name, 'IsComputed') AS IS_COMPUTED,
 COLUMNPROPERTY(c.object_id, c.name, 'ordinal') AS ORDINAL_POSITION,
 convert(nvarchar(4000), OBJECT_DEFINITION(c.default_object_id))	AS COLUMN_DEFAULT,
 convert(varchar(3), CASE c.is_nullable WHEN 1 THEN 'YES' ELSE 'NO' END)	AS IS_NULLABLE,
-ISNULL(TYPE_NAME(c.system_type_id), t.name)	AS DATA_TYPE,
+TYPE_NAME(c.user_type_id) AS DATA_TYPE,
 COLUMNPROPERTY(c.object_id, c.name, 'charmaxlen') AS CHARACTER_MAXIMUM_LENGTH,
 COLUMNPROPERTY(c.object_id, c.name, 'octetmaxlen') AS CHARACTER_OCTET_LENGTH,
 convert(tinyint, CASE -- int/decimal/numeric/real/float/money
@@ -59,50 +63,64 @@ c.collation_name AS COLLATION_NAME,
 convert(sysname, CASE WHEN c.user_type_id > 256
 THEN DB_NAME() END)	AS DOMAIN_CATALOG, convert(sysname, CASE WHEN c.user_type_id > 256
 THEN SCHEMA_NAME(t.schema_id)
-END) AS DOMAIN_SCHEMA, convert(sysname, CASE WHEN c.user_type_id > 256  
+END) AS DOMAIN_SCHEMA, convert(sysname, CASE WHEN c.user_type_id > 256
 THEN TYPE_NAME(c.user_type_id)
 END) AS DOMAIN_NAME
 FROM sys.objects o JOIN sys.columns c ON c.object_id = o.object_id
 LEFT JOIN sys.types t ON c.user_type_id = t.user_type_id
 WHERE o.type IN ('U') and SCHEMA_NAME(o.schema_id) = '{0}' and o.name = '{1}'";
 
-        public const string InformationSchemaTables = @"SELECT COUNT(*) FROM sys.objects o LEFT JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE o.type IN ('U', 'V') and o.name = '{0}' and s.name = '{1}'";
+    public const string InformationSchemaTables = "SELECT COUNT(*) FROM sys.objects o LEFT JOIN sys.schemas s ON s.schema_id = o.schema_id WHERE o.type IN ('U', 'V') and o.name = '{0}' and s.name = '{1}'";
 
-        /// <summary>
-        /// Security Audit Report
-        /// 1) List all access provisioned to a sql user or windows user/group directly 
-        /// 2) List all access provisioned to a sql user or windows user/group through a database or application role
-        /// 3) List all access provisioned to the public role
-        /// 
-        /// Columns Returned
-        /// UserName        : SQL or Windows/Active Directory user cccount.This could also be an Active Directory group.
-        /// UserType        : Value will be either 'SQL User' or 'Windows User'.  This reflects the type of user defined for the SQL Server user account.
-        /// DatabaseUserName: Name of the associated user as defined in the database user account.  The database user may not be the same as the server user.
-        /// Role            : The role name.This will be null if the associated permissions to the object are defined at directly on the user account, otherwise this will be the name of the role that the user is a member of.
-        /// PermissionType  : Type of permissions the user/role has on an object. Examples could include CONNECT, EXECUTE, SELECT DELETE, INSERT, ALTER, CONTROL, TAKE OWNERSHIP, VIEW DEFINITION, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
-        /// PermissionState : Reflects the state of the permission type, examples could include GRANT, DENY, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
-        /// ObjectType      : Type of object the user/role is assigned permissions on.Examples could include USER_TABLE, SQL_SCALAR_FUNCTION, SQL_INLINE_TABLE_VALUED_FUNCTION, SQL_STORED_PROCEDURE, VIEW, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
-        /// ObjectName      : Name of the object that the user/role is assigned permissions on. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
-        /// ColumnName      : Name of the column of the object that the user/role is assigned permissions on.This value is only populated if the object is a table, view or a table value function.  
-        /// </summary>
-        public const string SelectUserGrants = @"--List all access provisioned to a sql user or windows user/group directly 
-SELECT  
+    public const string TableKeyColumns = @"SELECT i.name AS INDEX_NAME,
+ic.key_ordinal AS KEY_ORDINAL,
+c.name AS COLUMN_NAME
+FROM sys.indexes i
+JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id AND ic.is_included_column = 0
+JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+JOIN sys.objects o ON o.object_id = i.object_id
+JOIN sys.schemas s ON s.schema_id = o.schema_id
+WHERE o.type IN ('U') AND s.name = '{0}' AND o.name = '{1}' AND (i.is_primary_key = 1 OR i.is_unique = 1)
+ORDER BY i.is_primary_key DESC, i.is_unique DESC, i.index_id, ic.key_ordinal";
+
+    /// <summary>
+    /// <para>
+    /// Security Audit Report
+    /// 1) List all access provisioned to a sql user or windows user/group directly
+    /// 2) List all access provisioned to a sql user or windows user/group through a database or application role
+    /// 3) List all access provisioned to the public role
+    /// </para>
+    /// <para>
+    /// Columns Returned
+    /// UserName        : SQL or Windows/Active Directory user cccount.This could also be an Active Directory group.
+    /// UserType        : Value will be either 'SQL User' or 'Windows User'.  This reflects the type of user defined for the SQL Server user account.
+    /// DatabaseUserName: Name of the associated user as defined in the database user account.  The database user may not be the same as the server user.
+    /// Role            : The role name.This will be null if the associated permissions to the object are defined at directly on the user account, otherwise this will be the name of the role that the user is a member of.
+    /// PermissionType  : Type of permissions the user/role has on an object. Examples could include CONNECT, EXECUTE, SELECT DELETE, INSERT, ALTER, CONTROL, TAKE OWNERSHIP, VIEW DEFINITION, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
+    /// PermissionState : Reflects the state of the permission type, examples could include GRANT, DENY, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
+    /// ObjectType      : Type of object the user/role is assigned permissions on.Examples could include USER_TABLE, SQL_SCALAR_FUNCTION, SQL_INLINE_TABLE_VALUED_FUNCTION, SQL_STORED_PROCEDURE, VIEW, etc. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
+    /// ObjectName      : Name of the object that the user/role is assigned permissions on. This value may not be populated for all roles.  Some built in roles have implicit permission definitions.
+    /// ColumnName      : Name of the column of the object that the user/role is assigned permissions on.This value is only populated if the object is a table, view or a table value function.
+    /// </para>
+    /// </summary>
+    public const string SelectUserGrants = @"--List all access provisioned to a sql user or windows user/group directly
+SELECT
     [UserName] = CASE princ.[type] WHEN 'S' THEN princ.[name] WHEN 'U' THEN ulogin.[name] COLLATE Latin1_General_CI_AI END,
-    [UserType] = CASE princ.[type] WHEN 'S' THEN 'SQL User' WHEN 'U' THEN 'Windows User' END,  
-    [DatabaseUserName] = princ.[name],       
-    [Role] = null,      
-    [PermissionType] = perm.[permission_name],       
-    [PermissionState] = perm.[state_desc],       
-    [ObjectType] = obj.type_desc,--perm.[class_desc],       
+    [UserType] = CASE princ.[type] WHEN 'S' THEN 'SQL User' WHEN 'U' THEN 'Windows User' END,
+    [DatabaseUserName] = princ.[name],
+    [Role] = null,
+    [PermissionType] = perm.[permission_name],
+    [PermissionState] = perm.[state_desc],
+    [ObjectType] = obj.type_desc,--perm.[class_desc],
     [ObjectName] = OBJECT_NAME(perm.major_id),
     [ColumnName] = col.[name]
-FROM    
+FROM
     --database user
-    sys.database_principals princ  
+    sys.database_principals princ
 LEFT JOIN
     --Login accounts
     sys.login_token ulogin on princ.[sid] = ulogin.[sid]
-LEFT JOIN        
+LEFT JOIN
     --Permissions
     sys.database_permissions perm ON perm.[grantee_principal_id] = princ.[principal_id]
 LEFT JOIN
@@ -110,21 +128,21 @@ LEFT JOIN
     sys.columns col ON col.[object_id] = perm.major_id AND col.[column_id] = perm.[minor_id]
 LEFT JOIN
     sys.objects obj ON perm.[major_id] = obj.[object_id]
-WHERE 
+WHERE
     (princ.[type] in ('S','U') AND ulogin.sid = SUSER_SID(SUSER_SNAME())) OR (ulogin.sid in((select [sid] from [sys].[database_principals] where [type] in ('R','G'))))
 UNION
 --List all access provisioned to a sql user or windows user/group through a database or application role
-SELECT  
+SELECT
     [UserName] = CASE memberprinc.[type] WHEN 'S' THEN memberprinc.[name] WHEN 'U' THEN ulogin.[name] COLLATE Latin1_General_CI_AI END,
-    [UserType] = CASE memberprinc.[type] WHEN 'S' THEN 'SQL User' WHEN 'U' THEN 'Windows User' END, 
-    [DatabaseUserName] = memberprinc.[name],   
-    [Role] = roleprinc.[name],      
-    [PermissionType] = perm.[permission_name],       
-    [PermissionState] = perm.[state_desc],       
-    [ObjectType] = obj.type_desc,--perm.[class_desc],   
+    [UserType] = CASE memberprinc.[type] WHEN 'S' THEN 'SQL User' WHEN 'U' THEN 'Windows User' END,
+    [DatabaseUserName] = memberprinc.[name],
+    [Role] = roleprinc.[name],
+    [PermissionType] = perm.[permission_name],
+    [PermissionState] = perm.[state_desc],
+    [ObjectType] = obj.type_desc,--perm.[class_desc],
     [ObjectName] = OBJECT_NAME(perm.major_id),
     [ColumnName] = col.[name]
-FROM    
+FROM
     --Role/member associations
     sys.database_role_members members
 JOIN
@@ -136,39 +154,39 @@ JOIN
 LEFT JOIN
     --Login accounts
     sys.login_token ulogin on memberprinc.[sid] = ulogin.[sid]
-LEFT JOIN        
+LEFT JOIN
     --Permissions
     sys.database_permissions perm ON perm.[grantee_principal_id] = roleprinc.[principal_id]
 LEFT JOIN
     --Table columns
-    sys.columns col on col.[object_id] = perm.major_id 
+    sys.columns col on col.[object_id] = perm.major_id
                     AND col.[column_id] = perm.[minor_id]
 LEFT JOIN
     sys.objects obj ON perm.[major_id] = obj.[object_id]
 WHERE ulogin.sid = SUSER_SID(SUSER_SNAME()) OR ulogin.sid in((select [sid] from [sys].[database_principals] where [type] in ('R','G')))
 UNION
 --List all access provisioned to the public role, which everyone gets by default
-SELECT  
+SELECT
     [UserName] = '{All Users}',
-    [UserType] = '{All Users}', 
-    [DatabaseUserName] = '{All Users}',       
-    [Role] = roleprinc.[name],      
-    [PermissionType] = perm.[permission_name],       
-    [PermissionState] = perm.[state_desc],       
-    [ObjectType] = obj.type_desc,--perm.[class_desc],  
+    [UserType] = '{All Users}',
+    [DatabaseUserName] = '{All Users}',
+    [Role] = roleprinc.[name],
+    [PermissionType] = perm.[permission_name],
+    [PermissionState] = perm.[state_desc],
+    [ObjectType] = obj.type_desc,--perm.[class_desc],
     [ObjectName] = OBJECT_NAME(perm.major_id),
     [ColumnName] = col.[name]
-FROM    
+FROM
     --Roles
     sys.database_principals roleprinc
-LEFT JOIN        
+LEFT JOIN
     --Role permissions
     sys.database_permissions perm ON perm.[grantee_principal_id] = roleprinc.[principal_id]
 LEFT JOIN
     --Table columns
-    sys.columns col on col.[object_id] = perm.major_id AND col.[column_id] = perm.[minor_id]                   
-JOIN 
-    --All objects   
+    sys.columns col on col.[object_id] = perm.major_id AND col.[column_id] = perm.[minor_id]
+JOIN
+    --All objects
     sys.objects obj ON obj.[object_id] = perm.[major_id]
 WHERE
     --Only roles
@@ -184,6 +202,4 @@ ORDER BY
     perm.[permission_name],
     perm.[state_desc],
     obj.type_desc--perm.[class_desc]";
-
-    }
 }

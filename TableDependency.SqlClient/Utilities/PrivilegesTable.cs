@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,54 +23,16 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-using System;
-using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
+using System.Linq;
+using TableDependency.SqlClient.Extensions;
 
-namespace TableDependency.SqlClient.Utilities
+namespace TableDependency.SqlClient.Utilities;
+
+internal class PrivilegesTable(SqlDataReader reader)
 {
-    internal class PrivilegesTable
-    {
-        public List<Privilege> Rows { get; set; } = new List<Privilege>();
-
-        public static PrivilegesTable FromEnumerable(IEnumerable<Dictionary<string, object>> rows)
-        {
-            var privilegesTable = new PrivilegesTable();
-            foreach (var row in rows) privilegesTable.Rows.Add(Privilege.FromDictionary(row));
-            return privilegesTable;
-        }
-    }
-
-    internal class Privilege
-    {
-        public string UserName { get; set; }
-        public string UserType { get; set; }
-        public string DatabaseUserName { get; set; }
-        public string Role { get; set; }
-        public string PermissionType { get; set; }
-        public string PermissionState { get; set; }
-        public string ObjectType { get; set; }
-        public string ObjectName { get; set; }
-        public string ColumnName { get; set; }
-
-        public static Privilege FromDictionary(Dictionary<string, object> columns)
-        {
-            var privilege = new Privilege();
-
-            foreach (var column in columns)
-            {
-                foreach (var propertyInfo in privilege.GetType().GetProperties())
-                {
-                    if (column.Key != propertyInfo.Name) continue;
-
-                    var theValue = column.Value == DBNull.Value ? null : column.Value;
-                    propertyInfo.SetValue(privilege, theValue);
-                    break;
-                }
-            }
-
-            return privilege;
-        }
-    }    
+    public Privilege[] Rows { get; set; } = [.. reader.Serialize().Select(Privilege.FromColumns)];
 }

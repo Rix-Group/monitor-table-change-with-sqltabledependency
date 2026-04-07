@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency, SqlTableDependencyFilter
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,6 +23,7 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System;
@@ -33,484 +35,497 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-
-using TableDependency.SqlClient.Base;
-using TableDependency.SqlClient.Base.Abstracts;
+using TableDependency.SqlClient.Base.Interfaces;
+using TableDependency.SqlClient.Extensions;
 using TableDependency.SqlClient.Where.Helpers;
 
-namespace TableDependency.SqlClient.Where
+namespace TableDependency.SqlClient.Where;
+
+public sealed class SqlTableDependencyFilter<T> : ExpressionVisitor, ITableDependencyFilter where T : class, new()
 {
-    public class SqlTableDependencyFilter<T> : ExpressionVisitor, ITableDependencyFilter where T : class, new()
+    #region Constructors
+
+    private static readonly HashSet<Type> AllowedTypes =
+    [
+        typeof(short),
+        typeof(short?),
+        typeof(int),
+        typeof(int?),
+        typeof(long),
+        typeof(long?),
+        typeof(string),
+        typeof(decimal),
+        typeof(decimal?),
+        typeof(float),
+        typeof(float?),
+        typeof(DateTime),
+        typeof(DateTime?),
+        typeof(double),
+        typeof(double?),
+        typeof(bool),
+        typeof(bool?)
+    ];
+
+    private readonly ParameterHelper _parameter = new();
+    private readonly Expression _filter;
+    private readonly IDictionary<string, string>? _modelMapperDictionary;
+
+    private readonly StringBuilder _whereConditionBuilder = new();
+
+    #endregion
+
+    #region Constructors
+
+    public SqlTableDependencyFilter(Expression<Func<T, bool>> filter, IModelToTableMapper<T>? mapper = null)
     {
-        #region Constructors
+        _filter = filter;
 
-        private readonly ParameterHelper _parameter = new ParameterHelper();
-        private readonly Expression _filter;
-        private readonly IDictionary<string, string> _modelMapperDictionary;
+        mapper = mapper?.Mappings.Count > 0
+            ? mapper
+            : CreateModelToTableMapperHelper();
 
-        private readonly StringBuilder _whereConditionBuilder = new StringBuilder();
-        private readonly IList<Type> _types = new List<Type>()
-        {
-            typeof (short),
-            typeof (short?),
-            typeof (int),
-            typeof (int?),
-            typeof (long),
-            typeof (long?),
-            typeof (string),
-            typeof (decimal),
-            typeof (decimal?),
-            typeof (float),
-            typeof (float?),
-            typeof (DateTime),
-            typeof (DateTime?),
-            typeof (double),
-            typeof (double?),
-            typeof (bool),
-            typeof (bool?)
-        };
+        _modelMapperDictionary = mapper?.Mappings.ToDictionary();
+    }
 
-        #endregion
+    #endregion
 
-        #region Constructors
-        public SqlTableDependencyFilter(Expression filter, IModelToTableMapper<T> modelMapperDictionary = null)
-        {
-            _filter = filter;
+    #region Public Methods
 
-            _modelMapperDictionary = modelMapperDictionary != null && modelMapperDictionary.Count() > 0
-                ? modelMapperDictionary.GetMappings().ToDictionary(kvp => kvp.Key.Name, kvp => kvp.Value)
-                : this.CreateModelToTableMapperHelper()?.GetMappings().ToDictionary(kvp => kvp.Key.Name, kvp => kvp.Value);
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        public string Translate()
-        {
-            if (_whereConditionBuilder.Length > 0) return _whereConditionBuilder.ToString().Trim();
-
-            this.Visit(_filter);
+    public string Translate()
+    {
+        if (_whereConditionBuilder.Length > 0)
             return _whereConditionBuilder.ToString().Trim();
+
+        Visit(_filter);
+        return _whereConditionBuilder.ToString().Trim();
+    }
+
+    #endregion
+
+    #region Protected Methods
+
+    protected override Expression VisitMethodCall(MethodCallExpression node)
+    {
+        if (node.Method.DeclaringType == typeof(Queryable) && node.Method.Name is "Where")
+            throw new ArgumentException("Cannot translate where of type Queryable.");
+
+        #region Trim
+
+        if (node.Method.Name is "Trim")
+        {
+            _whereConditionBuilder.Append("LTRIM(RTRIM(");
+            Visit(node.Object);
+            _whereConditionBuilder.Append("))");
+
+            return node;
         }
 
         #endregion
 
-        #region Protected Methods
+        #region StartsWith
 
-        protected override Expression VisitMethodCall(MethodCallExpression m)
+        if (node.Method.Name is "StartsWith")
         {
-            if (m.Method.DeclaringType == typeof(Queryable) && m.Method.Name == "Where")
+            Visit(node.Object);
+            _whereConditionBuilder.Append(" LIKE ");
+
+            _parameter.Append = "%";
+            Visit(node.Arguments[0]);
+            return node;
+        }
+
+        #endregion
+
+        #region EndsWith
+
+        if (node.Method.Name is "EndsWith")
+        {
+            Visit(node.Object);
+            _whereConditionBuilder.Append(" LIKE ");
+
+            _parameter.Prepend = "%";
+            Visit(node.Arguments[0]);
+            return node;
+        }
+
+        #endregion
+
+        #region Contains
+
+        if (node.Method.Name is "Contains")
+        {
+            if (node.Object is null)
             {
-                throw new ArgumentException();
+                // Enumerable.Contains(collection, item) -> translate to SQL: [column] IN (val1, val2, ...)
+                // arguments: [0] = collection, [1] = item
+                Visit(node.Arguments[1]);
+                _whereConditionBuilder.Append(" IN ");
+
+                // Evaluate the collection expression to get the values
+                var methodCallExpression = (MethodCallExpression)node.Arguments[0];
+                var memberExpression = (MemberExpression)methodCallExpression.Arguments[0];
+
+                var lambda = Expression.Lambda(memberExpression);
+                var getter = lambda.Compile();
+                var collectionObj = getter.DynamicInvoke();
+
+                if (collectionObj is not IEnumerable values)
+                    throw new ArgumentException("The first argument of Contains must be an IEnumerable.");
+
+                _whereConditionBuilder.Append(FormatInValues(values));
             }
-
-            #region Trim
-
-            if (m.Method.Name == "Trim")
+            else
             {
-                _whereConditionBuilder.Append("LTRIM(RTRIM(");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append("))");
-
-                return m;
-            }
-
-            #endregion
-
-            #region StartsWith
-
-            if (m.Method.Name == "StartsWith")
-            {
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(" LIKE ");
-
-                _parameter.Append = "%";
-                this.Visit(m.Arguments[0]);
-                return m;
-            }
-
-            #endregion
-
-            #region EndsWith
-
-            if (m.Method.Name == "EndsWith")
-            {
-                this.Visit(m.Object);
+                Visit(node.Object);
                 _whereConditionBuilder.Append(" LIKE ");
 
                 _parameter.Prepend = "%";
-                this.Visit(m.Arguments[0]);
-                return m;
+                _parameter.Append = "%";
+                Visit(node.Arguments[0]);
             }
 
-            #endregion
-
-            #region Contains            
-
-            if (m.Method.Name == "Contains")
-            {
-                if (m.Object == null)
-                {
-                    this.Visit((MemberExpression)m.Arguments[1]);
-                    _whereConditionBuilder.Append(" IN ");
-                    var memberExpression = (MemberExpression)m.Arguments[0];
-                    if (memberExpression.Expression.NodeType == ExpressionType.Constant) this.Visit(memberExpression.Expression);
-                }
-                else
-                {
-                    this.Visit(m.Object);
-                    _whereConditionBuilder.Append(" LIKE ");
-
-                    _parameter.Prepend = "%";
-                    _parameter.Append = "%";
-                    this.Visit(m.Arguments[0]);
-                }
-
-                return m;
-            }
-
-            #endregion
-
-            #region TrimStart
-
-            if (m.Method.Name == "TrimStart")
-            {
-                _whereConditionBuilder.Append("LTRIM(");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region TrimEnd
-
-            if (m.Method.Name == "TrimEnd")
-            {
-                _whereConditionBuilder.Append("RTRIM(");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region ToUpper
-
-            if (m.Method.Name == "ToUpper")
-            {
-                _whereConditionBuilder.Append("UPPER(");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region ToLower
-
-            if (m.Method.Name == "ToLower")
-            {
-                _whereConditionBuilder.Append("LOWER(");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region Substring
-
-            if (m.Method.Name == "Substring")
-            {
-                _whereConditionBuilder.Append("SUBSTRING(");
-                this.Visit(m.Object);
-
-                var startParameter = (ConstantExpression)m.Arguments[0];
-                if (!int.TryParse(startParameter?.Value.ToString(), out int intResult)) throw new ArgumentNullException();
-                _whereConditionBuilder.Append(", " + intResult);
-
-                var lenParameter = (ConstantExpression)m.Arguments[1];
-                if (!int.TryParse(lenParameter?.Value.ToString(), out intResult)) throw new ArgumentNullException();
-                _whereConditionBuilder.Append(", " + intResult + ")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region ToString
-
-            if (m.Method.Name == "ToString")
-            {
-                _whereConditionBuilder.Append("CONVERT(varchar(MAX), ");
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(")");
-
-                return m;
-            }
-
-            #endregion
-
-            #region Equals
-
-            if (m.Method.Name == "Equals" && m.Object != null)
-            {
-                this.Visit(m.Object);
-                _whereConditionBuilder.Append(" = ");
-                this.Visit(m.Arguments[0]);
-
-                return m;
-            }
-
-            #endregion
-
-            throw new NotSupportedException($"The method '{m.Method.Name}' is not supported.");
-        }
-
-        protected override Expression VisitUnary(UnaryExpression u)
-        {
-            switch (u.NodeType)
-            {
-                case ExpressionType.Not:
-                    _whereConditionBuilder.Append(" NOT ");
-                    this.Visit(u.Operand);
-                    break;
-
-                case ExpressionType.Convert:
-                    this.Visit(u.Operand);
-                    break;
-
-                default:
-                    throw new NotSupportedException($"The unary operator '{u.NodeType}' is not supported.");
-            }
-
-            return u;
-        }
-
-        protected override Expression VisitBinary(BinaryExpression b)
-        {
-            _whereConditionBuilder.Append("(");
-
-            this.Visit(b.Left);
-
-            switch (b.NodeType)
-            {
-                case ExpressionType.And:
-                    _whereConditionBuilder.Append(" AND ");
-                    break;
-
-                case ExpressionType.AndAlso:
-                    _whereConditionBuilder.Append(" AND ");
-                    break;
-
-                case ExpressionType.Or:
-                    _whereConditionBuilder.Append(" OR ");
-                    break;
-
-                case ExpressionType.OrElse:
-                    _whereConditionBuilder.Append(" OR ");
-                    break;
-
-                case ExpressionType.Equal:
-                    _whereConditionBuilder.Append(IsNullConstant(b.Right) ? " IS " : " = ");
-                    break;
-
-                case ExpressionType.NotEqual:
-                    _whereConditionBuilder.Append(IsNullConstant(b.Right) ? " IS NOT " : " <> ");
-                    break;
-
-                case ExpressionType.LessThan:
-                    _whereConditionBuilder.Append(" < ");
-                    break;
-
-                case ExpressionType.LessThanOrEqual:
-                    _whereConditionBuilder.Append(" <= ");
-                    break;
-
-                case ExpressionType.GreaterThan:
-                    _whereConditionBuilder.Append(" > ");
-                    break;
-
-                case ExpressionType.GreaterThanOrEqual:
-                    _whereConditionBuilder.Append(" >= ");
-                    break;
-
-                default:
-                    throw new NotSupportedException($"The binary operator '{b.NodeType}' is not supported.");
-            }
-
-            this.Visit(b.Right);
-
-            _whereConditionBuilder.Append(")");
-
-            return b;
-        }
-
-        protected override Expression VisitConstant(ConstantExpression c)
-        {
-            var q = c.Value as IQueryable;
-            if (q == null && c.Value == null)
-            {
-                _whereConditionBuilder.Append("NULL");
-            }
-            else if (q == null)
-            {
-                switch (Type.GetTypeCode(c.Value.GetType()))
-                {
-                    case TypeCode.Boolean:
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        break;
-
-                    case TypeCode.String:
-                        _whereConditionBuilder.Append("'");
-                        _whereConditionBuilder.Append(_parameter.Prepend);
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        _whereConditionBuilder.Append(_parameter.Append);
-                        _whereConditionBuilder.Append("'");
-                        break;
-
-                    case TypeCode.Decimal:
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        break;
-
-                    case TypeCode.Double:
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        break;
-
-                    case TypeCode.DateTime:
-                        _whereConditionBuilder.Append("'");
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        _whereConditionBuilder.Append("'");
-                        break;
-
-                    case TypeCode.Object:
-                        Type previousType = null;
-                        var fieldInfos = c.Type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                        if (typeof(IEnumerable).IsAssignableFrom(fieldInfos[0].FieldType))
-                        {
-                            var valuesToPrint = new List<string>();
-                            var values = (IEnumerable)fieldInfos[0].GetValue(c.Value);
-                            foreach (var value in values)
-                            {
-                                if (!_types.Contains(value.GetType())) throw new ArgumentException();
-                                if (previousType != null && previousType != value.GetType()) throw new ArgumentException();
-
-                                var quotes = this.Quotes(value.GetType());
-                                valuesToPrint.Add($"{quotes}{this.ToSqlFormat(value.GetType(), value)}{quotes}");
-
-                                previousType = value.GetType();
-                            }
-                            _whereConditionBuilder.Append("(" + string.Join(",", valuesToPrint) + ")");
-                        }
-                        else
-                        {
-                            throw new NotSupportedException($"The constant for '{c.Value}' is not supported");
-                        }
-
-                        break;
-
-                    default:
-                        _whereConditionBuilder.Append(this.ToSqlFormat(c.Value.GetType(), c.Value));
-                        break;
-                }
-            }
-
-            return c;
-        }
-
-        protected override Expression VisitMember(MemberExpression m)
-        {
-            if (m.Expression is ConstantExpression constantExpression)
-            {
-                var lambda = Expression.Lambda(m);
-                var fn = lambda.Compile();
-                return this.Visit(Expression.Constant(fn.DynamicInvoke(null), m.Type));
-            }
-
-            if (m.Expression is MemberExpression subMemberExpression)
-            {
-                throw new NotSupportedException("Cannot manage complex properties");
-            }
-
-            _whereConditionBuilder.Append($"[{this.GetDataBaseColumnName(m.Member.Name)}]");
-
-            return m;
+            return node;
         }
 
         #endregion
 
-        #region Private Methods
+        #region TrimStart
 
-        private ModelToTableMapper<T> CreateModelToTableMapperHelper()
+        if (node.Method.Name is "TrimStart")
         {
-            var modelPropertyInfosWithColumnAttribute = typeof(T)
-                    .GetProperties(BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.Public)
-                    .Where(x => CustomAttributeExtensions.IsDefined(x, typeof(ColumnAttribute), false))
-                    .ToArray();
+            _whereConditionBuilder.Append("LTRIM(");
+            Visit(node.Object);
+            _whereConditionBuilder.Append(')');
 
-            if (!modelPropertyInfosWithColumnAttribute.Any()) return null;
-
-            var mapper = new ModelToTableMapper<T>();
-            foreach (var propertyInfo in modelPropertyInfosWithColumnAttribute)
-            {
-                var attribute = propertyInfo.GetCustomAttribute(typeof(ColumnAttribute));
-                var dbColumnName = ((ColumnAttribute)attribute)?.Name;
-                if (string.IsNullOrWhiteSpace(dbColumnName))
-                {
-                    dbColumnName = propertyInfo.Name;
-                    mapper.AddMapping(propertyInfo, dbColumnName);
-                }
-
-                mapper.AddMapping(propertyInfo, dbColumnName);
-            }
-
-            return mapper;
-        }
-
-        private string GetDataBaseColumnName(string memberName)
-        {
-            if (_modelMapperDictionary == null || !_modelMapperDictionary.Any()) return memberName;
-            var mapping = _modelMapperDictionary.FirstOrDefault(mm => mm.Key.ToLower() == memberName.ToLower());
-
-            return default(KeyValuePair<string, string>).Equals(mapping)
-                ? memberName
-                : mapping.Value.Replace("[", string.Empty).Replace("]", string.Empty);
-        }
-
-        private string ToSqlFormat(Type type, object value)
-        {
-            if (type == typeof(bool)) return (bool)value ? "1" : "0";
-
-            if (type == typeof(string)) return value.ToString();
-
-            if (type == typeof(decimal)) return Convert.ToDecimal(value).ToString("g", CultureInfo.InvariantCulture);
-
-            if (type == typeof(double)) return Convert.ToDouble(value).ToString("g", CultureInfo.InvariantCulture);
-
-            if (type == typeof(DateTime)) return Convert.ToDateTime(value).ToString("s", CultureInfo.InvariantCulture);
-
-            return value.ToString();
-        }
-
-        protected string Quotes(Type type)
-        {
-            if (type == typeof(string)) return "'";
-            if (type == typeof(DateTime)) return "'";
-
-            return string.Empty;
-        }
-
-        protected bool IsNullConstant(Expression exp)
-        {
-            return exp.NodeType == ExpressionType.Constant && ((ConstantExpression)exp).Value == null;
+            return node;
         }
 
         #endregion
+
+        #region TrimEnd
+
+        if (node.Method.Name is "TrimEnd")
+        {
+            _whereConditionBuilder.Append("RTRIM(");
+            Visit(node.Object);
+            _whereConditionBuilder.Append(')');
+
+            return node;
+        }
+
+        #endregion
+
+        #region ToUpper
+
+        if (node.Method.Name is "ToUpper")
+        {
+            _whereConditionBuilder.Append("UPPER(");
+            Visit(node.Object);
+            _whereConditionBuilder.Append(')');
+
+            return node;
+        }
+
+        #endregion
+
+        #region ToLower
+
+        if (node.Method.Name is "ToLower")
+        {
+            _whereConditionBuilder.Append("LOWER(");
+            Visit(node.Object);
+            _whereConditionBuilder.Append(')');
+
+            return node;
+        }
+
+        #endregion
+
+        #region Substring
+
+        if (node.Method.Name is "Substring")
+        {
+            _whereConditionBuilder.Append("SUBSTRING(");
+            Visit(node.Object);
+
+            var startParameter = (ConstantExpression)node.Arguments[0];
+            if (!int.TryParse(startParameter?.Value?.ToString(), out int intResult))
+                throw new ArgumentNullException(nameof(node), "Could not parse arguments[0] as an int.");
+            _whereConditionBuilder.Append(", " + intResult);
+
+            var lenParameter = (ConstantExpression)node.Arguments[1];
+            if (!int.TryParse(lenParameter?.Value?.ToString(), out intResult))
+                throw new ArgumentNullException(nameof(node), "Could not parse arguments[1] as an int.");
+            _whereConditionBuilder.Append(", " + intResult + ")");
+
+            return node;
+        }
+
+        #endregion
+
+        #region ToString
+
+        if (node.Method.Name is "ToString")
+        {
+            _whereConditionBuilder.Append("CONVERT(varchar(MAX), ");
+            Visit(node.Object);
+            _whereConditionBuilder.Append(')');
+
+            return node;
+        }
+
+        #endregion
+
+        #region Equals
+
+        if (node.Method.Name is "Equals" && node.Object is not null)
+        {
+            Visit(node.Object);
+            _whereConditionBuilder.Append(" = ");
+            Visit(node.Arguments[0]);
+
+            return node;
+        }
+
+        #endregion
+
+        throw new NotSupportedException($"The method '{node.Method.Name}' is not supported.");
     }
+
+    protected override Expression VisitUnary(UnaryExpression node)
+    {
+        switch (node.NodeType)
+        {
+            case ExpressionType.Not:
+                _whereConditionBuilder.Append(" NOT ");
+                Visit(node.Operand);
+                break;
+
+            case ExpressionType.Convert:
+                Visit(node.Operand);
+                break;
+
+            default:
+                throw new NotSupportedException($"The unary operator '{node.NodeType}' is not supported.");
+        }
+
+        return node;
+    }
+
+    protected override Expression VisitBinary(BinaryExpression node)
+    {
+        _whereConditionBuilder.Append('(');
+
+        Visit(node.Left);
+
+        switch (node.NodeType)
+        {
+            case ExpressionType.And or ExpressionType.AndAlso:
+                _whereConditionBuilder.Append(" AND ");
+                break;
+
+            case ExpressionType.Or or ExpressionType.OrElse:
+                _whereConditionBuilder.Append(" OR ");
+                break;
+
+            case ExpressionType.Equal:
+                _whereConditionBuilder.Append(IsNullConstant(node.Right) ? " IS " : " = ");
+                break;
+
+            case ExpressionType.NotEqual:
+                _whereConditionBuilder.Append(IsNullConstant(node.Right) ? " IS NOT " : " <> ");
+                break;
+
+            case ExpressionType.LessThan:
+                _whereConditionBuilder.Append(" < ");
+                break;
+
+            case ExpressionType.LessThanOrEqual:
+                _whereConditionBuilder.Append(" <= ");
+                break;
+
+            case ExpressionType.GreaterThan:
+                _whereConditionBuilder.Append(" > ");
+                break;
+
+            case ExpressionType.GreaterThanOrEqual:
+                _whereConditionBuilder.Append(" >= ");
+                break;
+
+            default:
+                throw new NotSupportedException($"The binary operator '{node.NodeType}' is not supported.");
+        }
+
+        Visit(node.Right);
+
+        _whereConditionBuilder.Append(')');
+
+        return node;
+    }
+
+    protected override Expression VisitConstant(ConstantExpression node)
+    {
+        var q = node.Value as IQueryable;
+        if (q is null && node.Value is null)
+        {
+            _whereConditionBuilder.Append("NULL");
+        }
+        else if (q is null && node.Value is not null)
+        {
+            switch (Type.GetTypeCode(node.Value.GetType()))
+            {
+                case TypeCode.Boolean:
+                    _whereConditionBuilder.Append(ToSqlFormat(node.Value.GetType(), node.Value));
+                    break;
+
+                case TypeCode.String:
+                    _whereConditionBuilder.Append('\'');
+                    _whereConditionBuilder.Append(_parameter.Prepend);
+                    _whereConditionBuilder.Append(ToSqlFormat(node.Value.GetType(), node.Value));
+                    _whereConditionBuilder.Append(_parameter.Append);
+                    _whereConditionBuilder.Append('\'');
+                    break;
+
+                case TypeCode.Decimal or TypeCode.Double:
+                    _whereConditionBuilder.Append(ToSqlFormat(node.Value.GetType(), node.Value));
+                    break;
+
+                case TypeCode.DateTime:
+                    _whereConditionBuilder.Append('\'');
+                    _whereConditionBuilder.Append(ToSqlFormat(node.Value.GetType(), node.Value));
+                    _whereConditionBuilder.Append('\'');
+                    break;
+
+                case TypeCode.Object:
+                    var fieldInfos = node.Type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                    if (typeof(IEnumerable).IsAssignableFrom(fieldInfos[0].FieldType))
+                    {
+                        var values = (IEnumerable?)fieldInfos[0].GetValue(node.Value);
+                        _whereConditionBuilder.Append(FormatInValues(values));
+                    }
+                    else
+                    {
+                        throw new NotSupportedException($"The constant for '{node.Value}' is not supported");
+                    }
+
+                    break;
+
+                default:
+                    _whereConditionBuilder.Append(ToSqlFormat(node.Value.GetType(), node.Value));
+                    break;
+            }
+        }
+
+        return node;
+    }
+
+    protected override Expression VisitMember(MemberExpression node)
+    {
+        if (node.Expression is ConstantExpression)
+        {
+            var lambda = Expression.Lambda(node);
+            var fn = lambda.Compile();
+            return Visit(Expression.Constant(fn.DynamicInvoke(null), node.Type));
+        }
+
+        if (node.Expression is MemberExpression)
+            throw new NotSupportedException("Cannot manage complex properties.");
+
+        _whereConditionBuilder.Append($"[{GetDatabaseColumnName(node.Member.Name)}]");
+
+        return node;
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private static string FormatInValues(IEnumerable? values)
+    {
+        if (values is null)
+            return "()";
+
+        var valuesToPrint = new List<string>();
+        Type? previousType = null;
+
+        foreach (var value in values)
+        {
+            if (value is null)
+                throw new ArgumentException("Null values are not supported in Contains.");
+
+            var valueType = value.GetType();
+            if (!AllowedTypes.Contains(valueType))
+                throw new ArgumentException("Type not supported.");
+            if (previousType is not null && previousType != valueType)
+                throw new ArgumentException("Type mismatch.");
+
+            var quotes = Quotes(valueType);
+            valuesToPrint.Add($"{quotes}{ToSqlFormat(valueType, value)}{quotes}");
+            previousType = valueType;
+        }
+
+        return "(" + string.Join(",", valuesToPrint) + ")";
+    }
+
+    private static ModelToTableMapper<T>? CreateModelToTableMapperHelper()
+    {
+        var modelPropertyInfosWithColumnAttribute = typeof(T)
+            .GetProperties(BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(x => x.IsPublicOrInternal() && CustomAttributeExtensions.IsDefined(x, typeof(ColumnAttribute), false))
+            .ToArray();
+
+        if (modelPropertyInfosWithColumnAttribute.Length is 0)
+            return null;
+
+        var mapper = new ModelToTableMapper<T>();
+        foreach (var propertyInfo in modelPropertyInfosWithColumnAttribute)
+        {
+            var attribute = propertyInfo.GetCustomAttribute<ColumnAttribute>();
+            var dbColumnName = string.IsNullOrWhiteSpace(attribute?.Name)
+                ? propertyInfo.Name
+                : attribute.Name;
+            mapper.AddMapping(propertyInfo, dbColumnName);
+        }
+
+        return mapper;
+    }
+
+    private string GetDatabaseColumnName(string memberName)
+    {
+        if (_modelMapperDictionary?.Any() is not true)
+            return memberName;
+        var mapping = _modelMapperDictionary.FirstOrDefault(mm => mm.Key.Equals(memberName, StringComparison.InvariantCultureIgnoreCase));
+
+        return default(KeyValuePair<string, string>).Equals(mapping)
+            ? memberName
+            : mapping.Value.Replace("[", string.Empty).Replace("]", string.Empty);
+    }
+
+    private static string? ToSqlFormat(Type type, object value)
+    {
+        if (type == typeof(bool))
+            return (bool)value ? "1" : "0";
+
+        if (type == typeof(string))
+            return value.ToString();
+
+        if (type == typeof(decimal))
+            return Convert.ToDecimal(value).ToString("g", CultureInfo.InvariantCulture);
+
+        if (type == typeof(double))
+            return Convert.ToDouble(value).ToString("g", CultureInfo.InvariantCulture);
+
+        if (type == typeof(DateTime))
+            return Convert.ToDateTime(value).ToString("s", CultureInfo.InvariantCulture);
+
+        return value.ToString();
+    }
+
+    private static string Quotes(Type type)
+        => type == typeof(string) || type == typeof(DateTime) ? "'" : string.Empty;
+
+    private static bool IsNullConstant(Expression exp)
+        => exp.NodeType is ExpressionType.Constant && ((ConstantExpression)exp).Value is null;
+
+    #endregion
 }

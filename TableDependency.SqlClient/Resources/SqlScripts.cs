@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,16 +23,17 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Resources
+namespace TableDependency.SqlClient.Resources;
+
+public static partial class SqlScripts
 {
-    public static partial class SqlScripts
-    {
-        public const string CreateProcedureQueueActivation = @"CREATE PROCEDURE [{2}].[{0}_QueueActivationSender] 
+    public const string CreateProcedureQueueActivation = @"CREATE OR ALTER PROCEDURE [{2}].[{0}_QueueActivationSender]
 WITH EXECUTE AS SELF
-AS 
-BEGIN 
+AS
+BEGIN
     SET NOCOUNT ON;
     DECLARE @h AS UNIQUEIDENTIFIER;
     DECLARE @mt NVARCHAR(200);
@@ -44,7 +46,7 @@ BEGIN
     END
 
     IF @mt = N'http://schemas.microsoft.com/SQL/ServiceBroker/DialogTimer' OR @mt = N'http://schemas.microsoft.com/SQL/ServiceBroker/Error'
-    BEGIN 
+    BEGIN
         PRINT N'SqlTableDependency: Drop objects {0} started.';
 
         END CONVERSATION @h;
@@ -55,15 +57,15 @@ BEGIN
     END
 END";
 
-        // Triggers run, by default, under the security context of the principal who caused the trigger to fire.
-        // In order to change this behavior, you'll need to create the trigger using the WITH EXECUTE AS OWNER clause.
-        // Below is an example which shows how that works. WITH EXECUTE AS OWNER allows the trigger to run in the security context of the database owner, 
-        // instead of the principal who is updating the table.
-        // 
-        // EXECUTE AS SELF is equivalent to EXECUTE AS user_name, where the specified user is the person creating or altering the module.
-        public const string CreateTrigger = @"CREATE TRIGGER [tr_{0}_Sender] ON {1} 
+    // Triggers run, by default, under the security context of the principal who caused the trigger to fire.
+    // In order to change this behavior, you'll need to create the trigger using the WITH EXECUTE AS OWNER clause.
+    // Below is an example which shows how that works. WITH EXECUTE AS OWNER allows the trigger to run in the security context of the database owner,
+    // instead of the principal who is updating the table.
+    //
+    // EXECUTE AS SELF is equivalent to EXECUTE AS user_name, where the specified user is the person creating or altering the module.
+    public const string CreateTrigger = @"CREATE OR ALTER TRIGGER [tr_{0}_Sender] ON {1}
 WITH EXECUTE AS SELF
-AFTER {13} AS 
+{20} {13} AS
 BEGIN
     SET NOCOUNT ON;
 
@@ -78,16 +80,11 @@ BEGIN
     DECLARE @insertedTable TABLE ([RowNumber] INT IDENTITY(1, 1), {18})
     {5}
 
-    DECLARE @conversationHandlerExists INT
-    SELECT @conversationHandlerExists = COUNT(*) FROM sys.conversation_endpoints WHERE conversation_handle = '{19}';
-    IF @conversationHandlerExists = 0
-    BEGIN
-        {20}
-        RETURN
-    END
-    
+    {19}
+
     IF NOT EXISTS(SELECT 1 FROM INSERTED)
     BEGIN
+        {21}
         SET @dmlType = '{12}'
         INSERT INTO @modifiedRecordsTable SELECT {3} FROM DELETED {14}
     END
@@ -95,6 +92,7 @@ BEGIN
     BEGIN
         IF NOT EXISTS(SELECT * FROM DELETED)
         BEGIN
+            {22}
             SET @dmlType = '{10}'
             INSERT INTO @modifiedRecordsTable SELECT {3} FROM INSERTED {14}
         END
@@ -104,7 +102,7 @@ BEGIN
         END
     END
 
-    SELECT @rowsToProcess = COUNT(1) FROM @modifiedRecordsTable    
+    SELECT @rowsToProcess = COUNT(1) FROM @modifiedRecordsTable
 
     BEGIN TRY
         WHILE @rowsToProcess > 0
@@ -112,12 +110,12 @@ BEGIN
             SELECT	{6}
             FROM	@modifiedRecordsTable
             WHERE	[RowNumber] = @rowsToProcess
-                
-            IF @dmlType = '{10}' 
+
+            IF @dmlType = '{10}'
             BEGIN
                 {7}
             END
-        
+
             IF @dmlType = '{11}'
             BEGIN
                 {8}
@@ -142,7 +140,7 @@ BEGIN
     END CATCH
 END";
 
-        public const string InsertInTableVariableConsideringUpdateOf = @"IF ({0}) 
+    public const string InsertInTableVariableConsideringUpdateOf = @"IF ({0})
         BEGIN
             SET @dmlType = '{1}'
             {2}
@@ -151,18 +149,18 @@ END";
             RETURN;
         END";
 
-        public const string InsertInTableVariable = @"SET @dmlType = '{0}';
+    public const string InsertInTableVariable = @"SET @dmlType = '{0}';
             {1}";
 
-        public const string ScriptDropAll = @"DECLARE @conversation_handle UNIQUEIDENTIFIER;
+    public const string ScriptDropAll = @"DECLARE @conversation_handle UNIQUEIDENTIFIER;
         DECLARE @schema_id INT;
         SELECT @schema_id = schema_id FROM sys.schemas WITH (NOLOCK) WHERE name = N'{2}';
 
         PRINT N'SqlTableDependency: Dropping trigger [{2}].[tr_{0}_Sender].';
         IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{2}].[tr_{0}_Sender]'))
-        BEGIN        
+        BEGIN
             SELECT 1;
-            {3} 
+            {3}
         END
 
         PRINT N'SqlTableDependency: Deactivating queue [{2}].[{0}_Sender].';
@@ -173,7 +171,7 @@ END";
         DECLARE conversation_cursor CURSOR FAST_FORWARD FOR SELECT conversation_handle FROM #Conversations;
         OPEN conversation_cursor;
         FETCH NEXT FROM conversation_cursor INTO @conversation_handle;
-        WHILE @@FETCH_STATUS = 0 
+        WHILE @@FETCH_STATUS = 0
         BEGIN
             END CONVERSATION @conversation_handle WITH CLEANUP;
             FETCH NEXT FROM conversation_cursor INTO @conversation_handle;
@@ -199,13 +197,10 @@ END";
 
         PRINT N'SqlTableDependency: Dropping activation procedure {0}_QueueActivationSender.';
         IF EXISTS (SELECT * FROM sys.objects WITH (NOLOCK) WHERE schema_id = @schema_id AND name = N'{0}_QueueActivationSender') DROP PROCEDURE [{2}].[{0}_QueueActivationSender];
-        
+
         IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{2}].[tr_{0}_Sender]'))
-        BEGIN        
+        BEGIN
             SELECT 1;
-            {4} 
+            {4}
         END";
-
-
-    }
 }

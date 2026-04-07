@@ -1,65 +1,88 @@
-﻿using System;
-using System.Configuration;
-using System.Data.SqlClient;
+﻿#region License
 
-namespace TableDependency.SqlClient.Test.LoadTests.Writer2
+// TableDependency, SqlTableDependency
+// Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+
+#endregion
+
+using Microsoft.Data.SqlClient;
+using TableDependency.SqlClient.Test.Aspire.AppHost.ServiceDefaults;
+
+namespace TableDependency.SqlClient.Test.LoadTests.Writer2;
+
+public static class Program
 {
-    public class Program
+    public static async Task Main()
     {
-        public static void Main(string[] args)
+        int deletedCnt = 0;
+        int insertedCnt = 0;
+        int updatedCnt = 0;
+        int index = 1;
+        int i = 1;
+
+        Console.Title = new string('*', 10) + " SQL Server DB Writer 2 " + new string('*', 10);
+        await Task.Delay(TimeSpan.FromSeconds(6));
+
+        await using var sqlConnection = new SqlConnection(ServiceNames.TestUserConnectionString);
+        await sqlConnection.OpenAsync();
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        while (index < 7777)
         {
-            int deletedCnt = 0;
-            int insertedCnt = 0;
-            int updatedCnt = 0;
-            int total = 7777;
-            int index = 1;
-            int i = 1;
-
-            var connectionString = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
-
-            Console.Title = new string('*', 10) + " SQL Server DB Writer 2 " + new string('*', 10);
-            System.Threading.Thread.Sleep(6000);
-            using (var sqlConnection = new SqlConnection(connectionString))
+            switch (i)
             {
-                sqlConnection.Open();
-                using (var sqlCommand = sqlConnection.CreateCommand())
-                {
-                    while (index < total)
-                    {
-                        switch (i)
-                        {
-                            case 1:
-                                sqlCommand.CommandText = "INSERT INTO [LoadTest] ([Id], [FirstName], [SecondName]) VALUES (2, 'sono cazzi acidi', 'AAAAS')";                                
-                                if (sqlCommand.ExecuteNonQuery() > 0) insertedCnt++;
-                                i++;
-                                break;
+                case 1:
+                    sqlCommand.CommandText = "INSERT INTO [LoadTest] ([Id], [FirstName], [SecondName]) VALUES (2, 'sono cazzi acidi', 'AAAAS')";
+                    if (await sqlCommand.ExecuteNonQueryAsync() > 0)
+                        insertedCnt++;
+                    i++;
+                    break;
 
-                            case 2:
-                                sqlCommand.CommandText = "UPDATE [LoadTest] SET [FirstName] = 'Guai grossi', [SecondName] = '" + Guid.NewGuid() + "' WHERE [Id] = 2";
-                                if (sqlCommand.ExecuteNonQuery() > 0) updatedCnt++;
-                                i++;
-                                break;
+                case 2:
+                    sqlCommand.CommandText = "UPDATE [LoadTest] SET [FirstName] = 'Guai grossi', [SecondName] = '" + Guid.NewGuid() + "' WHERE [Id] = 2";
+                    if (await sqlCommand.ExecuteNonQueryAsync() > 0)
+                        updatedCnt++;
+                    i++;
+                    break;
 
-                            case 3:
-                                sqlCommand.CommandText = "DELETE FROM [LoadTest] WHERE [Id] = 2";
-                                if (sqlCommand.ExecuteNonQuery() > 0) deletedCnt++;
-                                i = 1;
-                                break;
-                        }
-
-                        Console.WriteLine("Writer 2 executed: " + Environment.NewLine + sqlCommand.CommandText);
-                        System.Threading.Thread.Sleep(50);
-                        index++;
-                    }
-                }
+                case 3:
+                    sqlCommand.CommandText = "DELETE FROM [LoadTest] WHERE [Id] = 2";
+                    if (await sqlCommand.ExecuteNonQueryAsync() > 0)
+                        deletedCnt++;
+                    i = 1;
+                    break;
             }
 
-            Console.WriteLine("INSERT counter: " + insertedCnt);
-            Console.WriteLine("UPDATE counter: " + updatedCnt);
-            Console.WriteLine("DELETE counter: " + deletedCnt);
-
-            Console.WriteLine(Environment.NewLine + "Press a key to exit");
-            Console.ReadKey();
+            Console.WriteLine("Writer 2 executed: " + Environment.NewLine + sqlCommand.CommandText);
+            await Task.Delay(50);
+            index++;
         }
+
+        Console.WriteLine("INSERT counter: " + insertedCnt);
+        Console.WriteLine("UPDATE counter: " + updatedCnt);
+        Console.WriteLine("DELETE counter: " + deletedCnt);
+
+        Console.WriteLine(Environment.NewLine + "Press a key to exit");
+        Console.ReadKey();
     }
 }

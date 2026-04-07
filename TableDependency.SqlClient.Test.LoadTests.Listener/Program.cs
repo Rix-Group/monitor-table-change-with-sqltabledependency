@@ -1,74 +1,105 @@
-﻿using System;
-using System.Configuration;
-using System.Data.SqlClient;
+﻿#region License
 
+// TableDependency, SqlTableDependency
+// Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+
+#endregion
+
+using Microsoft.Data.SqlClient;
 using TableDependency.SqlClient.Base.Enums;
 using TableDependency.SqlClient.Base.EventArgs;
+using TableDependency.SqlClient.Test.Aspire.AppHost.ServiceDefaults;
 
-namespace TableDependency.SqlClient.Test.LoadTests.Listener
+namespace TableDependency.SqlClient.Test.LoadTests.Listener;
+
+internal static class Program
 {
-    internal class Program
+    private static int _insertCounter;
+    private static int _updateCounter;
+    private static int _deleteCounter;
+
+    private static async Task DropAndCreateTableAsync(string connectionString)
     {
-        private static int _insertCounter;
-        private static int _updateCounter;
-        private static int _deleteCounter;
+        await using var sqlConnection = new SqlConnection(connectionString);
+        await sqlConnection.OpenAsync();
 
-        private static void DropAndCreateTable(string connectionString)
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        try
         {
-            using (var sqlConnection = new SqlConnection(connectionString))
-            {
-                sqlConnection.Open();
-                using (var sqlCommand = sqlConnection.CreateCommand())
-                {
-                    sqlCommand.CommandText = "DROP TABLE [dbo].[LoadTest]";
-                    sqlCommand.ExecuteNonQuery();
-                    sqlCommand.CommandText = "CREATE TABLE [LoadTest] ([Id] [int], [FirstName] nvarchar(50), [SecondName] nvarchar(50))";
-                    sqlCommand.ExecuteNonQuery();
-                }
-            }
+            sqlCommand.CommandText = "DROP TABLE [dbo].[LoadTest]";
+            await sqlCommand.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
         }
 
-        private static void Main()
-        {
-            var connectionString = ConfigurationManager.ConnectionStrings["connectionString"].ConnectionString;
-            DropAndCreateTable(connectionString);
+        sqlCommand.CommandText = "CREATE TABLE [LoadTest] ([Id] [int], [FirstName] nvarchar(50), [SecondName] nvarchar(50))";
+        await sqlCommand.ExecuteNonQueryAsync();
+    }
 
-            using (var tableDependency = new SqlTableDependency<LoadTest>(connectionString))
-            {
-                tableDependency.OnChanged += TableDependency_Changed;
-                tableDependency.OnError += TableDependency_OnError;
+    private static async Task Main()
+    {
+        var connectionString = ServiceNames.TestUserConnectionString;
+        await DropAndCreateTableAsync(connectionString);
 
-                tableDependency.Start();
-                Console.WriteLine("Waiting for receiving notifications...");
-                Console.WriteLine("Press a key to stop");
-                Console.ReadKey();
+        await using var tableDependency = await SqlTableDependency<LoadTest>.CreateSqlTableDependencyAsync(connectionString);
+        tableDependency.OnChanged += TableDependency_Changed;
+        tableDependency.OnException += TableDependency_OnException;
 
-                tableDependency.Stop();
-            }
-        }
+        await tableDependency.StartAsync();
+        Console.WriteLine("Waiting for receiving notifications...");
+        Console.WriteLine("Press a key to stop");
+        Console.ReadKey();
 
-        private static void TableDependency_OnError(object sender, ErrorEventArgs e)
-        {
-            Console.WriteLine(e.Error.Message);
-        }
+        await tableDependency.StopAsync();
+    }
 
-        private static void TableDependency_Changed(object sender, RecordChangedEventArgs<LoadTest> e)
-        {
-            Console.WriteLine(Environment.NewLine);
+    private static void TableDependency_OnException(ExceptionEventArgs e)
+        => Console.WriteLine(e.Exception?.Message ?? "An error has occurred.");
 
-            if (e.ChangeType == ChangeType.Insert) _insertCounter++;
-            if (e.ChangeType == ChangeType.Update) _updateCounter++;
-            if (e.ChangeType == ChangeType.Delete) _deleteCounter++;
+    private static void TableDependency_Changed(RecordChangedEventArgs<LoadTest> e)
+    {
+        Console.WriteLine(Environment.NewLine);
 
-            var changedEntity = e.Entity;
-            Console.WriteLine("DML operation: " + e.ChangeType);
-            Console.WriteLine("Id: " + changedEntity.Id);
-            Console.WriteLine("FirstName: " + changedEntity.FirstName);
-            Console.WriteLine("SecondName: " + changedEntity.SecondName);
-            Console.WriteLine("---------------------------------------------");
-            Console.WriteLine("Insert: " + _insertCounter);
-            Console.WriteLine("Update: " + _updateCounter);
-            Console.WriteLine("Delete: " + _deleteCounter);
-        }
+        if (e.ChangeType is ChangeType.Insert)
+            _insertCounter++;
+
+        if (e.ChangeType is ChangeType.Update)
+            _updateCounter++;
+
+        if (e.ChangeType is ChangeType.Delete)
+            _deleteCounter++;
+
+        var changedEntity = e.Entity;
+        Console.WriteLine("DML operation: " + e.ChangeType);
+        Console.WriteLine("Id: " + changedEntity.Id);
+        Console.WriteLine("FirstName: " + changedEntity.FirstName);
+        Console.WriteLine("SecondName: " + changedEntity.SecondName);
+        Console.WriteLine("---------------------------------------------");
+        Console.WriteLine("Insert: " + _insertCounter);
+        Console.WriteLine("Update: " + _updateCounter);
+        Console.WriteLine("Delete: " + _deleteCounter);
     }
 }

@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/workflows/publish.yml" />
+    <File Path="AGENTS.md" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames/TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.shproj" />
+    <Project Path="TableDependency.SqlClient.Test.Aspire.AppHost/TableDependency.SqlClient.Test.Aspire.AppHost.csproj" />
+    <Project Path="TableDependency.SqlClient.Test.Client/TableDependency.SqlClient.Test.Client.csproj" />
+    <Project Path="TableDependency.SqlClient.Test.CrashSim/TableDependency.SqlClient.Test.CrashSim.csproj" />
+    <Project Path="TableDependency.SqlClient.Test.LoadTests.Listener/TableDependency.SqlClient.Test.LoadTests.Listener.csproj" />
+    <Project Path="TableDependency.SqlClient.Test.LoadTests.Writer1/TableDependency.SqlClient.Test.LoadTests.Writer1.csproj" />
+    <Project Path="TableDependency.SqlClient.Test.LoadTests.Writer2/TableDependency.SqlClient.Test.LoadTests.Writer2.csproj" />
+    <Project Path="TableDependency.SqlClient.Test/TableDependency.SqlClient.Test.csproj" />
+  </Folder>
+  <Project Path="TableDependency.SqlClient/TableDependency.SqlClient.csproj" />
+</Solution>

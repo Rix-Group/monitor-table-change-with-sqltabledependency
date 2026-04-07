@@ -3,26 +3,36 @@
 	<PropertyGroup>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-		<Version>8.5.8</Version>
-		<TargetFrameworks>net451;netstandard2.0;netcoreapp2.0</TargetFrameworks>
+		<Version>10.0.0</Version>
+		<TargetFrameworks>net10.0</TargetFrameworks>
 		<Copyright>Christian Del Bianco © 2015-2020</Copyright>
-		<PackageLicenseUrl>https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/blob/master/LICENSE</PackageLicenseUrl>
-		<Description>SqlTableDependency is a high-level implementation to access table record change notifications from SQL Server. This class allows you to detect changes on a database table. Every change will send a notification messages contains values for the updated, inserted or deleted record, avoid you to execute a further select to update your application data. If you want to use record change notifications without paying attention to the underlying Service Broker infrastructure, the SqlTableDependency class is your choice. The SqlTableDependency class represents a notification dependency between an application and a SQL Server Table. When you use SqlTableDependency to get notifications, this componenet provides the low-level implementation creating the Queue and Service Broker. In this way SqlTableDependency class provides access to notifications without knowing anything about the underlying Service Broker infrastructure. Once a record change happens, SqlTableDependency's event subscribers are notified.</Description>
-		<PackageReleaseNotes>https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency/wiki/Release-Notes</PackageReleaseNotes>
-		<PackageId>SqlTableDependency</PackageId>
-		<Authors>Christian Del Bianco</Authors>
-		<Company>Christian Del Bianco</Company>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<Description>Rix.SqlTableDependency is a high-level implementation to access table record change notifications from SQL Server. This class allows you to detect changes on a database table. Every change will send a notification messages contains values for the updated, inserted or deleted record, avoid you to execute a further select to update your application data. If you want to use record change notifications without paying attention to the underlying Service Broker infrastructure, the SqlTableDependency class is your choice. The SqlTableDependency class represents a notification dependency between an application and a SQL Server Table. When you use SqlTableDependency to get notifications, this componenet provides the low-level implementation creating the Queue and Service Broker. In this way SqlTableDependency class provides access to notifications without knowing anything about the underlying Service Broker infrastructure. Once a record change happens, SqlTableDependency's event subscribers are notified.</Description>
+		<PackageId>Rix.SqlTableDependency</PackageId>
+		<Authors>Rix Group, Christian Del Bianco</Authors>
+		<Company>Rix Group, Christian Del Bianco</Company>
 		<Product>TableDependency.SqlClient</Product>
-		<PackageProjectUrl>https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency</PackageProjectUrl>
-		<PackageIconUrl>http://sqltabledependency.somee.com/rsz_notify.png</PackageIconUrl>
-		<RepositoryUrl>https://github.com/christiandelbianco/monitor-table-change-with-sqltabledependency</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Rix-Group/monitor-table-change-with-sqltabledependency</PackageProjectUrl>
+		<PackageIcon>icon.png</PackageIcon>
+		<RepositoryUrl>https://github.com/Rix-Group/monitor-table-change-with-sqltabledependency</RepositoryUrl>
 		<RepositoryType>GitHub</RepositoryType>
 		<PackageTags>SQL Server dependency notifications record table change</PackageTags>
-		<NeutralLanguage />
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.ComponentModel.Annotations" Version="4.4.0" />
-		<PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="170.1000.7" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<internalsvisibleto Include="TableDependency.SqlClient.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\icon.png" Pack="true" PackagePath="" />
+		<None Include="..\LICENSE" Pack="true" PackagePath="" />
+		<None Include="..\README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
 </Project>

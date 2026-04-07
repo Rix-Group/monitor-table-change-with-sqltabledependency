@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,18 +23,13 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System;
-
 using TableDependency.SqlClient.Base.Exceptions;
 
-namespace TableDependency.SqlClient.Exceptions
-{
-    public class ImpossibleOpenSqlConnectionException : TableDependencyException
-    {
-        protected internal ImpossibleOpenSqlConnectionException(string connectionString, Exception exception)
-            : base($"Impossible open db connection using the following connection string '{connectionString}'.", exception)
-        { }
-    }
-}
+namespace TableDependency.SqlClient.Exceptions;
+
+public sealed class ImpossibleOpenSqlConnectionException(string connectionString, Exception exception)
+    : TableDependencyException($"Impossible open db connection using the following connection string '{connectionString}'.", exception);

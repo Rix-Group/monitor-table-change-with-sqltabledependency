@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,17 +23,17 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Base.Enums
+namespace TableDependency.SqlClient.Base.Enums;
+
+public enum TableDependencyStatus
 {
-    public enum TableDependencyStatus
-    {
-        None,        
-        Starting,
-        Started,
-        WaitingForNotification,
-        StopDueToCancellation,
-        StopDueToError
-    }
+    None,
+    Starting,
+    Started,
+    WaitingForNotification,
+    StopDueToCancellation,
+    StopDueToError
 }

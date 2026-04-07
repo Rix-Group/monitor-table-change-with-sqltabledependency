@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,37 +23,17 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System.Globalization;
 
-namespace TableDependency.SqlClient.Base.EventArgs
+namespace TableDependency.SqlClient.Base.EventArgs;
+
+public abstract class BaseEventArgs(string server, string database, string sender, CultureInfo cultureInfo) : System.EventArgs
 {
-    public abstract class BaseEventArgs : System.EventArgs
-    {
-        #region Properties
-
-        public CultureInfo CultureInfo { get; protected set; }
-        public string Server { get; protected set; }
-        public string Database { get; protected set; }
-        public string Sender { get; protected set; }
-
-        #endregion
-
-        #region Constructors
-
-        protected BaseEventArgs(
-            string server, 
-            string database, 
-            string sender, 
-            CultureInfo cultureInfo = null)
-        {
-            this.Server = server;
-            this.Database = database;
-            this.Sender = sender;
-            this.CultureInfo = cultureInfo;
-        }
-
-        #endregion
-    }
+    public CultureInfo CultureInfo { get; protected set; } = cultureInfo;
+    public string Server { get; protected set; } = server;
+    public string Database { get; protected set; } = database;
+    public string Sender { get; protected set; } = sender;
 }

@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.1.2" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>9285f157-9bc5-4486-a395-15cc193db49a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.1" />
+	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.2.1" />
+  </ItemGroup>
+
+  <Import Project="..\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.projitems" Label="Shared" />
+
+</Project>

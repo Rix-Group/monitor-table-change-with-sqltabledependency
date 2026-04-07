@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,14 +23,10 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Base.Exceptions
-{
-    public class NoMatchBetweenModelAndTableColumns : TableDependencyException
-    {
-        public NoMatchBetweenModelAndTableColumns(string message = null)
-            : base(message ?? "Your C# model has no matching property with table columns.")
-        { }
-    }
-}
+namespace TableDependency.SqlClient.Base.Exceptions;
+
+public sealed class NoMatchBetweenModelAndTableColumns(string? message = null)
+    : TableDependencyException(message ?? "Your C# model has no matching property with table columns.");

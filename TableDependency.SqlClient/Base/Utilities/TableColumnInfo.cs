@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,21 +23,9 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Base.Utilities
-{
-    public class TableColumnInfo
-    {
-        public TableColumnInfo(string name, string type, string size = null)
-        {
-            this.Name = name;
-            this.Type = type;
-            this.Size = size;
-        }
+namespace TableDependency.SqlClient.Base.Utilities;
 
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public string Size { get; set; }
-    }
-}
+public sealed record TableColumnInfo(string Name, string Type, string? Size = null, bool IsIdentity = false, bool IsComputed = false);

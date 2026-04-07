@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "Startup Database",
+    "Projects": [
+      {
+        "Path": "TableDependency.SqlClient.Test.Aspire.AppHost\\TableDependency.SqlClient.Test.Aspire.AppHost.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      }
+    ]
+  },
+  {
+    "Name": "Load Tests",
+    "Projects": [
+      {
+        "Path": "TableDependency.SqlClient.Test.LoadTests.Listener\\TableDependency.SqlClient.Test.LoadTests.Listener.csproj",
+        "Action": "Start",
+        "DebugTarget": "TableDependency.SqlClient.Test.LoadTests.Listener"
+      },
+      {
+        "Path": "TableDependency.SqlClient.Test.LoadTests.Writer1\\TableDependency.SqlClient.Test.LoadTests.Writer1.csproj",
+        "Action": "Start",
+        "DebugTarget": "TableDependency.SqlClient.Test.LoadTests.Writer1"
+      },
+      {
+        "Path": "TableDependency.SqlClient.Test.LoadTests.Writer2\\TableDependency.SqlClient.Test.LoadTests.Writer2.csproj",
+        "Action": "Start",
+        "DebugTarget": "TableDependency.SqlClient.Test.LoadTests.Writer2"
+      }
+    ]
+  },
+  {
+    "Name": "Products Client",
+    "Projects": [
+      {
+        "Path": "TableDependency.SqlClient.Test.Client\\TableDependency.SqlClient.Test.Client.csproj",
+        "Action": "Start",
+        "DebugTarget": "TableDependency.SqlClient.Test.Client"
+      }
+    ]
+  }
+]

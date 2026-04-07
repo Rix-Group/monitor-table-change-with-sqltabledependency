@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency, SqlTableDependencyFilter
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,37 +23,34 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Where.Helpers
+namespace TableDependency.SqlClient.Where.Helpers;
+
+internal class ParameterHelper
 {
-    internal class ParameterHelper
+    internal string? Prepend
     {
-        private string _prepend;
-        private string _append;
-
-        internal string Prepend
+        get
         {
-            get
-            {
-                var value = _prepend;
-                _prepend = null;
-                return value;
-            }
-
-            set => _prepend = value;
+            var value = field;
+            field = null;
+            return value;
         }
 
-        internal string Append
-        {
-            get
-            {
-                var value = _append;
-                _append = null;
-                return value;
-            }
+        set => field = value;
+    }
 
-            set => _append = value;
+    internal string? Append
+    {
+        get
+        {
+            var value = field;
+            field = null;
+            return value;
         }
+
+        set => field = value;
     }
 }

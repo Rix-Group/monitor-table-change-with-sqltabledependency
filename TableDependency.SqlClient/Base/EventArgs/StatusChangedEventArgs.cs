@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,31 +23,16 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
+using System.Globalization;
 using TableDependency.SqlClient.Base.Enums;
 
-namespace TableDependency.SqlClient.Base.EventArgs
+namespace TableDependency.SqlClient.Base.EventArgs;
+
+public sealed class StatusChangedEventArgs(TableDependencyStatus status, string server, string database, string sender, CultureInfo cultureInfo)
+    : BaseEventArgs(server, database, sender, cultureInfo)
 {
-    public class StatusChangedEventArgs : BaseEventArgs
-    {
-        #region Properties
-
-        public TableDependencyStatus Status { get; protected set; }
-
-        #endregion
-
-        #region Constructors
-
-        internal StatusChangedEventArgs(
-            TableDependencyStatus status, 
-            string server, 
-            string database, 
-            string sender) : base(server, database, sender)
-        {
-            this.Status = status;
-        }
-
-        #endregion
-    }
+    public TableDependencyStatus Status { get; } = status;
 }

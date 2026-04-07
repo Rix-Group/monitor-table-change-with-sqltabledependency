@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,45 +23,29 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
 using System;
 
-namespace TableDependency.SqlClient.Base.Messages
+namespace TableDependency.SqlClient.Base.Messages;
+
+public sealed class Message
 {
-    public class Message
+    public bool IsOldValue => MessageType.EndsWith("/old", StringComparison.InvariantCultureIgnoreCase);
+    public string MessageType { get; }
+    public string Recipient { get; }
+    public byte[]? Body { get; }
+
+    public Message(string messageType, byte[]? body)
     {
-        #region Properties
+        var messageTypeTokens = messageType.Split('/');
 
-        public bool IsOldValue => this.MessageType.EndsWith("/old", StringComparison.InvariantCultureIgnoreCase); 
-        public string MessageType { get; }
-        public string Recipient { get; }
-        public byte[] Body { get; }
+        Recipient = messageType.EndsWith("/old", StringComparison.InvariantCultureIgnoreCase)
+            ? messageTypeTokens[^2]
+            : messageTypeTokens[^1];
 
-        #endregion
-
-        #region Constructors
-
-        public Message(string messageType, byte[] body)
-        {
-            this.Recipient = this.GetRecipient(messageType);
-            this.Body = body;
-            this.MessageType = messageType;
-        }
-
-        #endregion
-
-        #region Private methods
-
-        private string GetRecipient(string rawMessageType)
-        {
-            var messageTypeTokens = rawMessageType.Split('/');
-
-            return rawMessageType.EndsWith("/old", StringComparison.InvariantCultureIgnoreCase) 
-                ? messageTypeTokens[messageTypeTokens.Length - 2] 
-                : messageTypeTokens[messageTypeTokens.Length - 1];
-        }
-
-        #endregion
+        Body = body;
+        MessageType = messageType;
     }
 }

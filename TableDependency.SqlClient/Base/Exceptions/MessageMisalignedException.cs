@@ -1,4 +1,5 @@
 ﻿#region License
+
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
@@ -22,14 +23,10 @@
 // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
+
 #endregion
 
-namespace TableDependency.SqlClient.Base.Exceptions
-{
-    public class MessageMisalignedException : TableDependencyException
-    {
-        public MessageMisalignedException(string message = null)
-            : base(message)
-        { }
-    }
-}
+namespace TableDependency.SqlClient.Base.Exceptions;
+
+public sealed class MessageMisalignedException(string message)
+    : TableDependencyException(message);
