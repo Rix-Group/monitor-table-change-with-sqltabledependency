@@ -1,5 +1,5 @@
 # Monitor and receive notifications on record table change
-![License](https://img.shields.io/badge/License-MIT-blue.svg) ![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-RED.svg) ![.NET](https://img.shields.io/badge/.NET%20-%3E%3D%2010.0.0-ff69b4.svg)
+![License](https://img.shields.io/badge/License-MIT-red.svg) ![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-green.svg) ![.NET](https://img.shields.io/badge/.NET%20-%3E%3D%2010.0.0-blue.svg) [![NuGet Badge](https://img.shields.io/nuget/v/Rix.SqlTableDependency?label=NuGet&color=purple)](https://www.nuget.org/packages/Rix.SqlTableDependency/)
 
 **SqlTableDependency** is a high-level C# component used to audit, monitor and receive notifications on SQL Server's record table changes. 
 
@@ -10,6 +10,8 @@ For any record table change, as insert, update or delete operation, a notificati
 This **table record tracking change** system has the advantage to avoid a select to retrieve updated table record, because the updated table values record is delivered by notification.
 
 This is a fork of [IsNemoEqualTrue/monitor-table-change-with-sqltabledependency](https://github.com/IsNemoEqualTrue/monitor-table-change-with-sqltabledependency), introducing .NET 10+ support, async methods, builder pattern, and persistent objects.
+
+The package is available via NuGet https://www.nuget.org/packages/Rix.SqlTableDependency.
 
 ## Get record table change
 If we want **get alert on record table change** without paying attention to the underlying SQL Server infrastructure then SqlTableDependency's record table change notifications will do that for us. Using notifications, an application can **detect table record change** saving us from having to continuously re-query the database to get new values. For any record table change, SqlTableDependency's event handler gets a notification containing modified table record values as well as the INSERT, UPDATE, DELETE operation type executed on database table.
