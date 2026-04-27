@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+	<PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
   </ItemGroup>
 
   <Import Project="..\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.projitems" Label="Shared" />
