@@ -50,6 +50,7 @@ internal static class Program
     {
         var sqlPassword = builder.AddParameter("sqlpassword", secret: false);
         var sqlServer = builder.AddSqlServer(ServiceNames.SqlServerName, password: sqlPassword, port: ServiceNames.SqlServerPort)
+            .WithImage("mssql/server", "2025-latest")
             .WithLifetime(ContainerLifetime.Persistent)
             .WithEndpointProxySupport(false); // Make accessible after Aspire closes
 

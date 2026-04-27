@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.1" />
-	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.2.1" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.4" />
+	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.2.4" />
   </ItemGroup>
 
   <Import Project="..\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.projitems" Label="Shared" />
