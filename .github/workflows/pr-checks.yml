@@ -1,0 +1,100 @@
+name: PR Checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  packages: read
+
+env:
+  SOLUTION: TableDependency.slnx
+
+jobs:
+  ci:
+    name: Audit, Build, Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Scan for vulnerable packages
+        run: |
+          dotnet list ${{ env.SOLUTION }} package --vulnerable --include-transitive 2>&1 \
+            | tee vuln-report.txt
+          if grep -q "has the following vulnerable packages" vuln-report.txt; then
+            echo "::error::Vulnerabilities detected"
+            cat vuln-report.txt
+            exit 1
+          fi
+          echo "No vulnerabilities found."
+
+      - name: Build
+        run: |
+          dotnet build ${{ env.SOLUTION }} \
+            --no-restore \
+            -p:TreatWarningsAsErrors=true
+
+      - name: Test
+        run: |
+          dotnet test ${{ env.SOLUTION }} \
+            --no-restore \
+            --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            --logger "trx" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover \
+               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/obj/**,**/bin/**"
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Code Coverage
+        run: |
+          reportgenerator \
+            -reports:"./coverage/**/coverage.opencover.xml" \
+            -targetdir:"./coverage/report" \
+            -reporttypes:"TextSummary;Html;Badges"
+
+      - name: Ensure 95% Coverage
+        run: |
+          SUMMARY=$(cat ./coverage/report/Summary.txt)
+          echo "$SUMMARY"
+          LINE_COV=$(echo "$SUMMARY" | awk '/Line coverage/ { gsub(/%/, "", $NF); print $NF }')
+          if [ -z "$LINE_COV" ]; then
+            echo "::error::Could not parse line coverage from Summary.txt"
+            exit 1
+          fi
+          echo "Application layer line coverage: ${LINE_COV}%"
+          awk -v cov="$LINE_COV" 'BEGIN {
+            if (cov + 0 < 95.0) {
+              print "FAIL: Coverage " cov "% is below required 95% threshold"
+              exit 1
+            }
+            print "PASS: Coverage " cov "% meets threshold"
+          }'
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() }}
+        with:
+          name: Unit Tests
+          path: './coverage/**/*.trx'
+          reporter: dotnet-trx
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage-report
+          path: ./coverage/report
