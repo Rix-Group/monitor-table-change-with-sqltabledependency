@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-		<Version>10.0.0</Version>
+		<Version>10.0.1</Version>
 		<TargetFrameworks>net10.0</TargetFrameworks>
 		<Copyright>Christian Del Bianco © 2015-2020</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -19,6 +19,8 @@
 		<RepositoryType>GitHub</RepositoryType>
 		<PackageTags>SQL Server dependency notifications record table change</PackageTags>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
