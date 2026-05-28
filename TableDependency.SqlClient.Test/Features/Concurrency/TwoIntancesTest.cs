@@ -95,6 +95,7 @@ public class TwoIntancesTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency1 = await SqlTableDependency<TwoIntancesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName1, ct: TestContext.Current.CancellationToken);
             tableDependency1.OnChanged += TableDependency_Changed1;
             naming1 = tableDependency1.NamingPrefix;
@@ -105,6 +106,7 @@ public class TwoIntancesTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency1.StartAsync(ct: TestContext.Current.CancellationToken);
             await tableDependency2.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             var t1 = ModifyTableContent1();
             var t2 = ModifyTableContent2();
 
@@ -120,6 +122,7 @@ public class TwoIntancesTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency2.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(_checkValues1[ChangeType.Insert].All(m => m is { Id: 1, Name: "Luciano Bruschi" }));
         Assert.Equal(50, _checkValues1[ChangeType.Insert].Count);
         Assert.True(_checkValues1[ChangeType.Update].All(m => m is { Id: 2, Name: "Ceccarelli Velia" }));

@@ -76,6 +76,7 @@ public class ExpandoObjectTest(DatabaseFixture databaseFixture) : SqlTableDepend
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<ExpandoObject>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -86,6 +87,7 @@ public class ExpandoObjectTest(DatabaseFixture databaseFixture) : SqlTableDepend
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -95,6 +97,7 @@ public class ExpandoObjectTest(DatabaseFixture databaseFixture) : SqlTableDepend
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(_received.ContainsKey(ChangeType.Insert));
         Assert.True(_received.ContainsKey(ChangeType.Update));
         Assert.True(_received.ContainsKey(ChangeType.Delete));

@@ -79,6 +79,7 @@ public class TaskCancellationTest(DatabaseFixture databaseFixture) : SqlTableDep
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<TaskCancellationTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
@@ -87,6 +88,7 @@ public class TaskCancellationTest(DatabaseFixture databaseFixture) : SqlTableDep
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
             await tableDependency.StopAsync();
         }
@@ -96,6 +98,7 @@ public class TaskCancellationTest(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
     }

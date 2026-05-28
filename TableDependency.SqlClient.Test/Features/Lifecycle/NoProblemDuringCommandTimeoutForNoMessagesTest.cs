@@ -62,6 +62,7 @@ public class NoProblemDuringCommandTimeoutForNoMessagesTest(DatabaseFixture data
     [Fact]
     public async Task Test()
     {
+        // ACT
         // Execute the logic in a separate method scope
         // This unloads the ALC
         (var naming, var status, var alcWeakRef) = await ExecuteInIsolatedContext();
@@ -76,6 +77,7 @@ public class NoProblemDuringCommandTimeoutForNoMessagesTest(DatabaseFixture data
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         }
 
+        // ASSERT
         Assert.False(alcWeakRef.IsAlive, "The AssemblyLoadContext failed to unload!");
         Assert.True(status is not nameof(TableDependencyStatus.StopDueToError) and not nameof(TableDependencyStatus.StopDueToCancellation));
         Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));

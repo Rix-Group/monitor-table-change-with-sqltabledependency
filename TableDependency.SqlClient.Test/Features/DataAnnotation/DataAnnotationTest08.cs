@@ -68,11 +68,13 @@ public class DataAnnotationTest08(DatabaseFixture databaseFixture) : SqlTableDep
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<DataAnnotationTestSqlServer8Model>? tableDependency = null;
         Exception? actualEx = null;
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer8Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (NoMatchBetweenModelAndTableColumns ex)
@@ -85,6 +87,7 @@ public class DataAnnotationTest08(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Null(tableDependency);
         Assert.NotNull(actualEx);
         Assert.Equal("Your C# model has no matching property with table columns.", actualEx.Message);

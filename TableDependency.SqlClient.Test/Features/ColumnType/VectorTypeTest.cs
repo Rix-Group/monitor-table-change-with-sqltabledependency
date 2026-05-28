@@ -80,11 +80,13 @@ public class VectorTypeTest(DatabaseFixture databaseFixture) : SqlTableDependenc
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<VectorTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -94,6 +96,7 @@ public class VectorTypeTest(DatabaseFixture databaseFixture) : SqlTableDependenc
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal("[1.0000000e+000,2.0000000e+000,3.0000000e+000]", _checkValues[ChangeType.Insert].Embedding);
         Assert.Equal("[4.0000000e+000,5.0000000e+000,6.0000000e+000]", _checkValues[ChangeType.Update].Embedding);
         Assert.Equal("[1.0000000e+000,2.0000000e+000,3.0000000e+000]", _checkOldValues[ChangeType.Update]?.Embedding);

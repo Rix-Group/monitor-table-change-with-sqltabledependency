@@ -108,6 +108,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<FilterUsingSchemaTestModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -120,6 +121,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -129,6 +131,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -154,6 +157,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<FilterUsingSchemaTestModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -166,6 +170,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -175,6 +180,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

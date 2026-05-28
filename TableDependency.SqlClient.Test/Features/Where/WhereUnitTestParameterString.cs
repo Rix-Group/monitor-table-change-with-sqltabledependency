@@ -39,13 +39,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToUpper().Substring(0, 3).EndsWith(par1);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("SUBSTRING(UPPER(LTRIM(RTRIM([Code]))), 0, 3) LIKE '%WWW'", where);
     }
 
@@ -54,13 +54,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToUpper().Substring(0, 3).Contains(par1);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("SUBSTRING(UPPER(LTRIM(RTRIM([Code]))), 0, 3) LIKE '%WWW%'", where);
     }
 
@@ -69,13 +69,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToUpper().Substring(0, 3).StartsWith(par1);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("SUBSTRING(UPPER(LTRIM(RTRIM([Code]))), 0, 3) LIKE 'WWW%'", where);
     }
 
@@ -84,13 +84,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToUpper().Substring(0, 3).Equals(par1);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("SUBSTRING(UPPER(LTRIM(RTRIM([Code]))), 0, 3) = 'WWW'", where);
     }
 
@@ -99,13 +99,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToUpper().Substring(0, 3) == par1;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(SUBSTRING(UPPER(LTRIM(RTRIM([Code]))), 0, 3) = 'WWW')", where);
     }
 
@@ -114,13 +114,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToLower().Substring(0, 3) == par1.ToLower();
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(SUBSTRING(LOWER(LTRIM(RTRIM([Code]))), 0, 3) = LOWER('WWW'))", where);
     }
 
@@ -129,13 +129,13 @@ public class WhereUnitTestParameterString
     {
         const string par1 = "WWW";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim().ToLower().Substring(0, 3) == par1.Trim().ToLower().Substring(0, 3);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(SUBSTRING(LOWER(LTRIM(RTRIM([Code]))), 0, 3) = SUBSTRING(LOWER(LTRIM(RTRIM('WWW'))), 0, 3))", where);
     }
 }

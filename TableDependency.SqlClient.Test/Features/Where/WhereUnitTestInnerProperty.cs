@@ -37,10 +37,10 @@ public class WhereUnitTestInnerProperty
     [Fact]
     public void ExceptionExpected1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Category.Description == "Pasta";
 
-        // Act
+        // ACT / ASSERT
         Assert.Throws<NotSupportedException>(() => new SqlTableDependencyFilter<Product>(expression).Translate());
     }
 }

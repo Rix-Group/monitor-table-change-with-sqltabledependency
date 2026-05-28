@@ -75,6 +75,7 @@ public class CancellationTokenTest(DatabaseFixture databaseFixture) : SqlTableDe
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var token = cts.Token;
 
@@ -89,6 +90,8 @@ public class CancellationTokenTest(DatabaseFixture databaseFixture) : SqlTableDe
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
         await using var sqlCommand = sqlConnection.CreateCommand();
+
+        // ACT
         while (!token.IsCancellationRequested)
         {
             sqlCommand.CommandText = $"INSERT INTO [{TableName}] ([First Name], [Second Name]) VALUES ('{DateTime.Now.Ticks}', '{DateTime.Now.Ticks}')";
@@ -101,6 +104,7 @@ public class CancellationTokenTest(DatabaseFixture databaseFixture) : SqlTableDe
 
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+        // ASSERT
         Assert.True(await AreAllDbObjectDisposedAsync(objectNaming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(objectNaming, TestContext.Current.CancellationToken));
 

@@ -89,10 +89,12 @@ public class DateTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<DateTypeTestModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -102,6 +104,7 @@ public class DateTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.DateColumn, _checkValues[ChangeType.Insert].Item2.DateColumn);
         Assert.Null(_checkValues[ChangeType.Insert].Item2.DatetimeColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Datetime2Column, _checkValues[ChangeType.Insert].Item2.Datetime2Column);

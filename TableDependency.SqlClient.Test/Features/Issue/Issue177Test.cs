@@ -80,12 +80,14 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -95,6 +97,7 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotNull(_theError);
         Assert.IsType<NoMatchBetweenModelAndTableColumns>(_theError);
 
@@ -110,12 +113,14 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -125,6 +130,7 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues[ChangeType.Insert].Id);
         Assert.Equal("Cat", _checkValues[ChangeType.Insert].Message);
 

@@ -73,6 +73,7 @@ public class StartTwiceThrowsExceptionTest(DatabaseFixture databaseFixture) : Sq
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<StartTwiceThrowsExceptionTestModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -83,6 +84,7 @@ public class StartTwiceThrowsExceptionTest(DatabaseFixture databaseFixture) : Sq
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT / ASSERT
             await Assert.ThrowsAsync<AlreadyListeningException>(()
                 => tableDependency.StartAsync(ct: TestContext.Current.CancellationToken));
         }

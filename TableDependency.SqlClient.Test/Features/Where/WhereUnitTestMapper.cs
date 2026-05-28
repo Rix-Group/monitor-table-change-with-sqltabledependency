@@ -40,13 +40,13 @@ public class WhereUnitTestMapper
         var mapper = new ModelToTableMapper<Product>();
         mapper.AddMapping(c => c.Code, "BarCode");
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code == "042100005264";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression, mapper).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([BarCode] = '042100005264')", where);
     }
 
@@ -56,13 +56,13 @@ public class WhereUnitTestMapper
         var mapper = new ModelToTableMapper<Product>();
         mapper.AddMapping(c => c.Code, "[BarCode]");
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code == "042100005264";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression, mapper).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([BarCode] = '042100005264')", where);
     }
 }

@@ -93,11 +93,13 @@ public class UseSchemaOtherThanDboTestSqlServer(DatabaseFixture databaseFixture)
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<UseSchemaOtherThanDboTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -107,6 +109,7 @@ public class UseSchemaOtherThanDboTestSqlServer(DatabaseFixture databaseFixture)
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
         Assert.Equal(_checkValues[ChangeType.Update].Item1.Name, _checkValues[ChangeType.Update].Item2.Name);

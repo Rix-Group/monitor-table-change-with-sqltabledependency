@@ -37,13 +37,13 @@ public class WhereUnitTestToLower
     [Fact]
     public void ToLower1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.ToLower() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(LOWER([Code]) = '123')", where);
     }
 }

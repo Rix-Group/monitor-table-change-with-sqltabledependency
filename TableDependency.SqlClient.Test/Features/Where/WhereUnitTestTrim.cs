@@ -37,65 +37,65 @@ public class WhereUnitTestTrim
     [Fact]
     public void Trim1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Trim() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(LTRIM(RTRIM([Code])) = '123')", where);
     }
 
     [Fact]
     public void LTrim1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.TrimEnd() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(RTRIM([Code]) = '123')", where);
     }
 
     [Fact]
     public void RTrim1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.TrimStart() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(LTRIM([Code]) = '123')", where);
     }
 
     [Fact]
     public void LRTrim1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.TrimStart() == "123" && p.Code.TrimEnd() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("((LTRIM([Code]) = '123') AND (RTRIM([Code]) = '123'))", where);
     }
 
     [Fact]
     public void RLTrim1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.TrimEnd() == "123" && p.Code.TrimStart() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("((RTRIM([Code]) = '123') AND (LTRIM([Code]) = '123'))", where);
     }
 }

@@ -73,6 +73,7 @@ public class NonPersistentRestartAfterCrashTest(DatabaseFixture databaseFixture)
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         const int timeoutSeconds = 60;
         const int watchdogTimeoutSeconds = 120;
 
@@ -102,6 +103,7 @@ public class NonPersistentRestartAfterCrashTest(DatabaseFixture databaseFixture)
             restartedNaming = tableDependency.NamingPrefix;
             Assert.NotEqual(crashedNaming, restartedNaming);
 
+            // ACT
             await ModifyTableContentAsync();
             await WaitForCounterAsync(expectedCount: 3, timeout: TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
         }
@@ -111,6 +113,7 @@ public class NonPersistentRestartAfterCrashTest(DatabaseFixture databaseFixture)
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _changeCounter);
         Assert.False(string.IsNullOrWhiteSpace(restartedNaming));
         Assert.True(await AreAllDbObjectDisposedAsync(restartedNaming, TestContext.Current.CancellationToken));

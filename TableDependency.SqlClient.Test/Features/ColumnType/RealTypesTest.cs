@@ -74,11 +74,13 @@ public class RealTypesTestSqlServer(DatabaseFixture databaseFixture) : SqlTableD
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<RealTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -88,6 +90,7 @@ public class RealTypesTestSqlServer(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.RealColumn, _checkValues[ChangeType.Insert].Item2.RealColumn);
         Assert.Equal(_checkValues[ChangeType.Update].Item1.RealColumn, _checkValues[ChangeType.Update].Item2.RealColumn);
         Assert.Equal(_checkValues[ChangeType.Delete].Item1.RealColumn, _checkValues[ChangeType.Delete].Item2.RealColumn);

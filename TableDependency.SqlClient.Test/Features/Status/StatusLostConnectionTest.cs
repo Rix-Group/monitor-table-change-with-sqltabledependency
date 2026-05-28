@@ -81,6 +81,7 @@ public class StatusLostConnectionTest(DatabaseFixture databaseFixture) : SqlTabl
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<StatusLostConnectionTestModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
@@ -95,9 +96,11 @@ public class StatusLostConnectionTest(DatabaseFixture databaseFixture) : SqlTabl
             var taskModifyTableContent = ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
+            // ACT
             await KillSqlTableDependencyDbConnection();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+            // ASSERT
             Assert.True(_statuses[TableDependencyStatus.Starting]);
             Assert.True(_statuses[TableDependencyStatus.Started]);
             Assert.True(_statuses[TableDependencyStatus.WaitingForNotification]);

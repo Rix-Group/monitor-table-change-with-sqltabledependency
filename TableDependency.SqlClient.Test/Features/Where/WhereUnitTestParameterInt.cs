@@ -39,13 +39,13 @@ public class WhereUnitTestParameterInt
     {
         const int par1 = 123;
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Id == par1;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Id] = 123)", where);
     }
 
@@ -54,13 +54,13 @@ public class WhereUnitTestParameterInt
     {
         const int par1 = 123;
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Id >= par1;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Id] >= 123)", where);
     }
 
@@ -70,13 +70,13 @@ public class WhereUnitTestParameterInt
         const int par1 = 123;
         const int par2 = 321;
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Id >= par1 && p.Id <= par2;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(([Id] >= 123) AND ([Id] <= 321))", where);
     }
 
@@ -85,10 +85,10 @@ public class WhereUnitTestParameterInt
     {
         const string par1 = "123";
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Id >= int.Parse(par1);
 
-        // Act
+        // ACT / ASSERT
         Assert.Throws<NotSupportedException>(() => new SqlTableDependencyFilter<Product>(expression).Translate());
     }
 }

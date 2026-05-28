@@ -84,6 +84,7 @@ public class DataAnnotationNotMappedTest1(DatabaseFixture databaseFixture) : Sql
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<DataAnnotationNotMappedTest1Model>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 schemaName: SchemaName,
@@ -94,6 +95,7 @@ public class DataAnnotationNotMappedTest1(DatabaseFixture databaseFixture) : Sql
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContentTest1Async();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -103,6 +105,7 @@ public class DataAnnotationNotMappedTest1(DatabaseFixture databaseFixture) : Sql
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValuesTest1[ChangeType.Insert].Item1.StringNumberInDatabase, _checkValuesTest1[ChangeType.Insert].Item2.StringNumberInDatabase);

@@ -84,11 +84,13 @@ public class WhereMultipleConditionsTest(DatabaseFixture databaseFixture) : SqlT
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<ProdottiSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, mapper: mapper, filter: whereCondition, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -98,6 +100,7 @@ public class WhereMultipleConditionsTest(DatabaseFixture databaseFixture) : SqlT
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
         Assert.Equal(1, _ids[ChangeType.Insert]);
         Assert.Equal(2, _ids[ChangeType.Update]);

@@ -78,11 +78,13 @@ public class NoTableAndColumnDefinitionsTestSqlServerTest(DatabaseFixture databa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<NoTableAndColumnDefinitionsTestSqlServerTestModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -92,6 +94,7 @@ public class NoTableAndColumnDefinitionsTestSqlServerTest(DatabaseFixture databa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Surname, _checkValues[ChangeType.Insert].Item2.Surname);

@@ -38,13 +38,13 @@ public class WhereUnitTestContains
     [Fact]
     public void StringContains()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Contains("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Code] LIKE '%123%'", where);
     }
 
@@ -53,13 +53,13 @@ public class WhereUnitTestContains
     {
         var ids = new[] { 1, 2, 3 };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => ids.Contains(p.Id);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Id] IN (1,2,3)", where);
     }
 
@@ -68,13 +68,13 @@ public class WhereUnitTestContains
     {
         var codes = new[] { "one", "two" };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => codes.Contains(p.Code);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Code] IN ('one','two')", where);
     }
 
@@ -83,13 +83,13 @@ public class WhereUnitTestContains
     {
         var prices = new[] { 123.45M, 432.10M };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => prices.Contains(p.Price);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Price] IN (123.45,432.10)", where);
     }
 
@@ -98,13 +98,13 @@ public class WhereUnitTestContains
     {
         var prices = new[] { 123.45f, 432.10f };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => prices.Contains(p.ExcangeRate);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal($"[ExcangeRate] IN ({123.45},{432.1})", where);
     }
 
@@ -116,13 +116,13 @@ public class WhereUnitTestContains
             DateTime.ParseExact("2009-05-18 14:40:52,531", "yyyy-MM-dd HH:mm:ss,fff", CultureInfo.InvariantCulture)
         };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => codes.Contains(p.ExpireDateTime);
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[ExpireDateTime] IN ('2010-05-18T14:40:52','2009-05-18T14:40:52')", where);
     }
 }

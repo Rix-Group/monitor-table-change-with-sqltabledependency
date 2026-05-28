@@ -77,14 +77,17 @@ public class NoChangesDuringFirstThreeMinutesTest2(DatabaseFixture databaseFixtu
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<NoChangesDuringFirstThreeMinutesTestSqlServer2Model>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+            // ASSERT
             Assert.Equal(3, _counter);
             Assert.Equal(_checkValues1[ChangeType.Insert].Item1.Name, _checkValues1[ChangeType.Insert].Item2.Name);
             Assert.Equal(_checkValues1[ChangeType.Insert].Item1.Surname, _checkValues1[ChangeType.Insert].Item2.Surname);

@@ -23,6 +23,9 @@
 - Don't add a trailing line to the end of a file.
 - Always run the unit tests related to any code changes you make.
 - Always add/update related unit tests.
+- Keep test comments concise and one line - no multi-line preamble blocks above classes/assertions.
+- Structure every test with `// ARRANGE`, `// ACT`, `// ASSERT` section markers, and make the test fail by observing the real defect (not by string-matching on production code).
 - Nullable reference types are enabled; keep new code nullable-safe.
 - If you add/remove projects, update the `.slnx`
+- The `WaitForNotificationsAsync` loop must arm `BEGIN CONVERSATION TIMER` in persisted mode too: it is the only thing that retires an idle initiator dialog. The `DialogTimer` fires onto the `_Sender` queue, whose activation procedure runs `END CONVERSATION` (its drop-all script is empty when persisted, so objects survive). Drop it and persisted dialogs stay `CONVERSING` forever — any test that waits for a persisted conversation to self-close (e.g. `Pr232`) hangs.
 - When you learn something non-obvious, add it here so future changes go faster.

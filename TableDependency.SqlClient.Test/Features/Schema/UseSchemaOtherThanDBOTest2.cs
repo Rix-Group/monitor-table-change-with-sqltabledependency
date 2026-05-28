@@ -103,11 +103,13 @@ public class UseSchemaOtherThanDboTestSqlServer2(DatabaseFixture databaseFixture
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<UseSchemaOtherThanDboTestSqlServer2Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -117,6 +119,7 @@ public class UseSchemaOtherThanDboTestSqlServer2(DatabaseFixture databaseFixture
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Description, _checkValues[ChangeType.Insert].Item2.Description);
@@ -140,11 +143,13 @@ public class UseSchemaOtherThanDboTestSqlServer2(DatabaseFixture databaseFixture
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<UseSchemaOtherThanDboTestSqlServer2Model>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -154,6 +159,7 @@ public class UseSchemaOtherThanDboTestSqlServer2(DatabaseFixture databaseFixture
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Description, _checkValues[ChangeType.Insert].Item2.Description);

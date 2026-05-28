@@ -93,11 +93,13 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -107,6 +109,7 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.BigintColumn, _checkValues[ChangeType.Insert].Item2.BigintColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Decimal18Column, _checkValues[ChangeType.Insert].Item2.Decimal18Column);
         Assert.Null(_checkValues[ChangeType.Insert].Item2.Decimal54Column);
@@ -134,11 +137,13 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -148,6 +153,7 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.BigintColumn, _checkValues[ChangeType.Insert].Item2.BigintColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Decimal18Column, _checkValues[ChangeType.Insert].Item2.Decimal18Column);
         Assert.Null(_checkValues[ChangeType.Insert].Item2.Decimal54Column);

@@ -80,6 +80,7 @@ public class ModelWithAnnotationUsedWithConstructorParameterTest(DatabaseFixture
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<Model>? tableDependency = null;
         string naming;
 
@@ -96,6 +97,7 @@ public class ModelWithAnnotationUsedWithConstructorParameterTest(DatabaseFixture
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -105,6 +107,7 @@ public class ModelWithAnnotationUsedWithConstructorParameterTest(DatabaseFixture
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal("Pizza MERGHERITA", _checkValues[ChangeType.Insert].Name);

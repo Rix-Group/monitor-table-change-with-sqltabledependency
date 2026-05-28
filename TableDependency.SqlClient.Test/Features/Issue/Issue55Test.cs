@@ -80,6 +80,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<Issue55Model>();
         mapper.AddMapping(c => c.PaymentDiscount, "Payment Discount %");
         mapper.AddMapping(c => c.AllowQuantity, "Allow Quantity Disc_");
@@ -99,6 +100,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -108,6 +110,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.DocNo, _checkValues[ChangeType.Insert].Item2.DocNo);
@@ -132,6 +135,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task TestWithOldEntity()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<Issue55Model>();
         mapper.AddMapping(c => c.PaymentDiscount, "Payment Discount %");
         mapper.AddMapping(c => c.AllowQuantity, "Allow Quantity Disc_");
@@ -151,6 +155,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -160,6 +165,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.DocNo, _checkValues[ChangeType.Insert].Item2.DocNo);

@@ -39,13 +39,13 @@ public class WhereUnitTestMoreCondition
     {
         var ids = new[] { 1, 2, 3 };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => ids.Contains(p.Id) && p.Code.Trim().Substring(0, 3).Equals("WWW");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Id] IN (1,2,3) AND SUBSTRING(LTRIM(RTRIM([Code])), 0, 3) = 'WWW')", where);
     }
 
@@ -54,16 +54,16 @@ public class WhereUnitTestMoreCondition
     {
         var ids = new[] { 1, 2, 3 };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p =>
             ids.Contains(p.Id) &&
             p.Code.Trim().Substring(0, 3).Equals("WWW") &&
             p.Id == 100;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(([Id] IN (1,2,3) AND SUBSTRING(LTRIM(RTRIM([Code])), 0, 3) = 'WWW') AND ([Id] = 100))", where);
     }
 
@@ -72,15 +72,15 @@ public class WhereUnitTestMoreCondition
     {
         var ids = new[] { 1 };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p =>
             ids.Contains(p.Id) ||
             (p.Code.Equals("WWW") && p.Code.Substring(0, 3) == "22");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Id] IN (1) OR ([Code] = 'WWW' AND (SUBSTRING([Code], 0, 3) = '22')))", where);
     }
 
@@ -89,17 +89,17 @@ public class WhereUnitTestMoreCondition
     {
         var ids = new[] { 1 };
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p =>
             ids.Contains(p.Id) ||
             p.Code.Equals("WWW") &&
             p.Code.Substring(0, 3) == "22" ||
             p.ExcangeRate > 1;
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(([Id] IN (1) OR ([Code] = 'WWW' AND (SUBSTRING([Code], 0, 3) = '22'))) OR ([ExcangeRate] > 1))", where);
     }
 
@@ -110,17 +110,17 @@ public class WhereUnitTestMoreCondition
         // (1 OR 0) AND 0 => 0
         // 1 OR (0 AND 0) => 1
 
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression1 = p => p.Id == 1 || p.Id == 0 && p.Id == 0;
         Expression<Func<Product, bool>> expression2 = p => (p.Id == 1 || p.Id == 0) && p.Id == 0;
         Expression<Func<Product, bool>> expression3 = p => p.Id == 1 || (p.Id == 0 && p.Id == 0);
 
-        // Act
+        // ACT
         var where1 = new SqlTableDependencyFilter<Product>(expression1).Translate();
         var where2 = new SqlTableDependencyFilter<Product>(expression2).Translate();
         var where3 = new SqlTableDependencyFilter<Product>(expression3).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(([Id] = 1) OR (([Id] = 0) AND ([Id] = 0)))", where1);
         Assert.Equal("((([Id] = 1) OR ([Id] = 0)) AND ([Id] = 0))", where2);
         Assert.Equal("(([Id] = 1) OR (([Id] = 0) AND ([Id] = 0)))", where3);

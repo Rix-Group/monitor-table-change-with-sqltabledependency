@@ -70,11 +70,13 @@ public class DataAnnotationTest06(DatabaseFixture databaseFixture) : SqlTableDep
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<DataAnnotationTestSqlServer6Model>? tableDependency = null;
         Exception? actualEx = null;
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer6Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (NotExistingTableException ex)
@@ -87,6 +89,7 @@ public class DataAnnotationTest06(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Null(tableDependency);
         Assert.NotNull(actualEx);
         Assert.Equal("I cannot find a database table named 'XXXX'.", actualEx.Message);

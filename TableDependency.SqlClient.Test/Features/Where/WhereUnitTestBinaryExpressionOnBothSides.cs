@@ -40,13 +40,13 @@ public class WhereUnitTestBinaryExpressionOnBothSides
     [Fact]
     public void ExpressionOnBothSides1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Substring(1, 3).ToLower() == p.Id.ToString().ToLower();
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(LOWER(SUBSTRING([Code], 1, 3)) = LOWER(CONVERT(varchar(MAX), [Id])))", where);
     }
 }

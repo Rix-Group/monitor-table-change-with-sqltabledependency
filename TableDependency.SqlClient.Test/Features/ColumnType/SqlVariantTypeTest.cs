@@ -79,11 +79,13 @@ public class SqlVariantTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<SqlVariantTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -93,6 +95,7 @@ public class SqlVariantTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(10, _checkValues[ChangeType.Insert].Value);
         Assert.Equal(20, _checkValues[ChangeType.Update].Value);
         Assert.Equal(20, _checkValues[ChangeType.Delete].Value);

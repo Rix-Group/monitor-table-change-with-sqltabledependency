@@ -74,11 +74,13 @@ public class TimestampTypeTest(DatabaseFixture databaseFixture) : SqlTableDepend
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TimestampTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -88,6 +90,7 @@ public class TimestampTypeTest(DatabaseFixture databaseFixture) : SqlTableDepend
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotEmpty(_checkValues[ChangeType.Insert]);
         Assert.NotEmpty(_checkValues[ChangeType.Update]);
         Assert.NotEmpty(_checkValues[ChangeType.Delete]);

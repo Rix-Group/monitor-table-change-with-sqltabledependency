@@ -78,6 +78,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
     [Fact]
     public async Task RaiseException1()
     {
+        // ARRANGE
         SqlTableDependency<TriggerTypeTestSqlServerModel>? tableDependency = null;
 
         var updateOf = new UpdateOfModel<TriggerTypeTestSqlServerModel>();
@@ -87,6 +88,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -102,12 +104,14 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         if (tableDependency is not null)
             await tableDependency.DisposeAsync();
 
+        // ASSERT
         Assert.True(exceptionThrown);
     }
 
     [Fact]
     public async Task RaiseException2()
     {
+        // ARRANGE
         var updateOf = new UpdateOfModel<TriggerTypeTestSqlServerModel>();
         updateOf.Add(t => t.Surname);
 
@@ -117,6 +121,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -132,12 +137,14 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         if (tableDependency is not null)
             await tableDependency.DisposeAsync();
 
+        // ASSERT
         Assert.True(exceptionThrown);
     }
 
     [Fact]
     public async Task RaiseException3()
     {
+        // ARRANGE
         var updateOf = new UpdateOfModel<TriggerTypeTestSqlServerModel>();
         updateOf.Add(t => t.Surname);
 
@@ -147,6 +154,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -162,6 +170,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         if (tableDependency is not null)
             await tableDependency.DisposeAsync();
 
+        // ASSERT
         Assert.True(exceptionThrown);
     }
 
@@ -173,6 +182,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -183,6 +193,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -192,6 +203,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);
@@ -209,6 +221,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -219,6 +232,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -228,6 +242,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _counter);
 
         Assert.Equal("Pizza Funghi", _checkValues[ChangeType.Delete].Item2.Name);
@@ -245,6 +260,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -255,6 +271,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -264,6 +281,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _counter);
 
         Assert.Equal("Pizza Funghi", _checkValues[ChangeType.Update].Item2.Name);
@@ -281,6 +299,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -291,6 +310,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -300,6 +320,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);
@@ -320,6 +341,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -330,6 +352,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -339,6 +362,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);
@@ -359,6 +383,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -369,6 +394,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -378,6 +404,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);
@@ -401,6 +428,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -411,6 +439,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -420,6 +449,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);
