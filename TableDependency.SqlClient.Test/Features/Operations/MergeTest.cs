@@ -119,11 +119,13 @@ public class MergeTest(DatabaseFixture databaseFixture) : SqlTableDependencyBase
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MergeTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TargetTableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MergeOperation();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -133,6 +135,7 @@ public class MergeTest(DatabaseFixture databaseFixture) : SqlTableDependencyBase
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(100, _insertedValues?.Quantity);
         Assert.Equal(200, _modifiedValues?.Quantity);
         Assert.Equal(0, _deletedValues?.Quantity);

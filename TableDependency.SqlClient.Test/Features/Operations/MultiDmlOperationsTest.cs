@@ -85,6 +85,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
@@ -110,6 +111,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiDeleteOperation();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -119,6 +121,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _modifiedValues.Count);
         Assert.Contains(_initialValues, i => i.Equals(_modifiedValues[0]));
         Assert.Contains(_initialValues, i => i.Equals(_modifiedValues[1]));
@@ -131,6 +134,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task TwoUpdateTest()
     {
+        // ARRANGE
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
@@ -156,6 +160,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiUpdateOperation("VELIA");
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -165,6 +170,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _modifiedValues.Count);
         Assert.Equal("VELIA", _modifiedValues[0].Name);
         Assert.Equal("VELIA", _modifiedValues[1].Name);
@@ -176,6 +182,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task ThreeUpdateTest()
     {
+        // ARRANGE
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
@@ -201,6 +208,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiUpdateOperation("xxx");
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -210,6 +218,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _modifiedValues.Count);
         Assert.Equal("xxx", _modifiedValues[0].Name);
         Assert.Equal("xxx", _modifiedValues[1].Name);
@@ -227,6 +236,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<MultiDmlOperationsTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
@@ -236,6 +246,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiInsertOperation();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -245,6 +256,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _modifiedValues.Count);
         Assert.Contains(_initialValues, i => i.Equals(_modifiedValues[0]));
         Assert.Contains(_initialValues, i => i.Equals(_modifiedValues[1]));

@@ -131,11 +131,13 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue53Model1>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName1, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -145,6 +147,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues1[ChangeType.Insert].Item1.Id, _checkValues1[ChangeType.Insert].Item2.Id);
         Assert.Equal(_checkValues1[ChangeType.Insert].Item1.Sex, _checkValues1[ChangeType.Insert].Item2.Sex);
         Assert.Equal(_checkValues1[ChangeType.Update].Item1.Id, _checkValues1[ChangeType.Update].Item2.Id);
@@ -164,11 +167,13 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue53Model2>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName2, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed2;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -178,6 +183,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues2[ChangeType.Insert].Item1.Id, _checkValues2[ChangeType.Insert].Item2.Id);
         Assert.Equal(_checkValues2[ChangeType.Insert].Item1.Sex, _checkValues2[ChangeType.Insert].Item2.Sex);
         Assert.Equal(_checkValues2[ChangeType.Update].Item1.Id, _checkValues2[ChangeType.Update].Item2.Id);
@@ -197,11 +203,13 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue53Model3>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName3, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed3;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent3();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -211,6 +219,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues3[ChangeType.Insert].Item1.Id, _checkValues3[ChangeType.Insert].Item2.Id);
         Assert.Equal(_checkValues3[ChangeType.Insert].Item1.Sex, _checkValues3[ChangeType.Insert].Item2.Sex);
         Assert.Equal(_checkValues3[ChangeType.Update].Item1.Id, _checkValues3[ChangeType.Update].Item2.Id);
@@ -230,11 +239,13 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue53Model4>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName4, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed4;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent4();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -244,6 +255,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues4[ChangeType.Insert].Item1.Id, _checkValues4[ChangeType.Insert].Item2.Id);
         Assert.Equal(_checkValues4[ChangeType.Insert].Item1.Sex, _checkValues4[ChangeType.Insert].Item2.Sex);
         Assert.Equal(_checkValues4[ChangeType.Update].Item1.Id, _checkValues4[ChangeType.Update].Item2.Id);

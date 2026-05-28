@@ -81,11 +81,13 @@ public class StopAndStartTest(DatabaseFixture databaseFixture) : SqlTableDepende
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<StopAndStartTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming1 = tableDependency.NamingPrefix;
 
+            // ACT
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
             await tableDependency.StopAsync();
 
@@ -102,6 +104,7 @@ public class StopAndStartTest(DatabaseFixture databaseFixture) : SqlTableDepende
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

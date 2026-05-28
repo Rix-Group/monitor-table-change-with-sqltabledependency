@@ -78,11 +78,13 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiInsertOperation1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -92,6 +94,7 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _checkValues.Count);
         Assert.Equal(100, _checkValues[0].Id);
         Assert.Equal(200, _checkValues[1].Id);
@@ -105,11 +108,13 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await MultiInsertOperation2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -119,6 +124,7 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _checkValues.Count);
         Assert.Equal("a", _checkValues[0].Letter);
         Assert.Equal("b", _checkValues[1].Letter);

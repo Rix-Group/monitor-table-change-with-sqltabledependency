@@ -66,6 +66,7 @@ public class EndpointsStatusTest(DatabaseFixture databaseFixture) : SqlTableDepe
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         bool startReceivingMessages = false;
 
         var tableDependency = await SqlTableDependency<EndpointsStatusModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
@@ -76,11 +77,13 @@ public class EndpointsStatusTest(DatabaseFixture databaseFixture) : SqlTableDepe
         Assert.True(await IsSenderEndpointInStatus(naming, ConversationEndpointState.SO));
         Assert.True(await IsReceiverEndpointInStatus(naming, null));
 
+        // ACT
         var t = InsertRecord();
 
         while (!startReceivingMessages)
             await Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
 
+        // ASSERT
         Assert.True(await IsSenderEndpointInStatus(naming, ConversationEndpointState.CO));
         Assert.True(await IsReceiverEndpointInStatus(naming, ConversationEndpointState.CO));
 

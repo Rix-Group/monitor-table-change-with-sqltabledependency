@@ -97,11 +97,13 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<BinaryBitCharVarbinaryTypesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -111,6 +113,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(GetString(_checkValues[ChangeType.Insert].Item1.Binary50Column), GetString(_checkValues[ChangeType.Insert].Item2.Binary50Column));
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.BitColumn, _checkValues[ChangeType.Insert].Item2.BitColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Char10Column, _checkValues[ChangeType.Insert].Item2.Char10Column);
@@ -141,6 +144,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<BinaryBitCharVarbinaryTypesModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 tableName: TableName,
@@ -151,6 +155,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -160,6 +165,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(GetString(_checkValues[ChangeType.Insert].Item1.Binary50Column), GetString(_checkValues[ChangeType.Insert].Item2.Binary50Column));
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.BitColumn, _checkValues[ChangeType.Insert].Item2.BitColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Char10Column, _checkValues[ChangeType.Insert].Item2.Char10Column);

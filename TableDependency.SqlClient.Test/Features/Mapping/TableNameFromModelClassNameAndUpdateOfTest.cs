@@ -95,6 +95,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
 
         try
         {
+            // ARRANGE
             var updateOf = new UpdateOfModel<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>();
             updateOf.Add(model => model.FamilyName);
 
@@ -103,6 +104,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -112,6 +114,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -134,6 +137,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
 
         try
         {
+            // ARRANGE
             var updateOf = new UpdateOfModel<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>();
             updateOf.Add(model => model.FamilyName);
 
@@ -142,6 +146,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -151,6 +156,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

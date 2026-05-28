@@ -81,10 +81,12 @@ public class Issue65Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue65Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -94,6 +96,7 @@ public class Issue65Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.InvoiceDate, _checkValues[ChangeType.Insert].Item2.InvoiceDate);
         Assert.Equal(_checkValues[ChangeType.Update].Item1.InvoiceDate, _checkValues[ChangeType.Update].Item2.InvoiceDate);
         Assert.Equal(_checkValues[ChangeType.Delete].Item1.InvoiceDate, _checkValues[ChangeType.Delete].Item2.InvoiceDate);

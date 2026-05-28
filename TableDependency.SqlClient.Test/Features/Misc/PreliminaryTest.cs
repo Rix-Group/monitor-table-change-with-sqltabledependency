@@ -92,27 +92,37 @@ public class PreliminaryTest(DatabaseFixture databaseFixture) : SqlTableDependen
     [Fact]
     public void MapperWithNullTest()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<PreliminaryTestSqlServerModel>();
 
+        // ACT
         var ex = Assert.Throws<ModelToTableMapperException>(() => mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, null!));
+
+        // ASSERT
         Assert.Equal("ModelToTableMapper cannot contains null or empty strings.", ex.Message);
     }
 
     [Fact]
     public void MappertWithEmptyTest()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<PreliminaryTestSqlServerModel>();
 
+        // ACT
         var ex = Assert.Throws<ModelToTableMapperException>(() => mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, string.Empty));
+
+        // ASSERT
         Assert.Equal("ModelToTableMapper cannot contains null or empty strings.", ex.Message);
     }
 
     [Fact]
     public async Task InvalidMappertTest()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<PreliminaryTestSqlServerModel>();
         mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Not Exist");
 
+        // ACT / ASSERT
         await Assert.ThrowsAsync<ModelToTableMapperException>(
             () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken));
     }

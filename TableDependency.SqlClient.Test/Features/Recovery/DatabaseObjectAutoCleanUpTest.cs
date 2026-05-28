@@ -80,6 +80,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestInsertAfterStop()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<DatabaseObjectCleanUpTestSqlServerModel>();
         mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
@@ -94,6 +95,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
         var dbObjectsNaming = tableDependency.NamingPrefix;
 
+        // ACT
         await BigModifyTableContent();
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
@@ -101,6 +103,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
         await SmallModifyTableContent();
 
+        // ASSERT
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         Assert.True(await AreAllDbObjectDisposedAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
@@ -109,6 +112,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestCleanUpAfter2InsertsTest()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<DatabaseObjectCleanUpTestSqlServerModel>();
         mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
@@ -125,11 +129,13 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
         await Task.Delay(TimeSpan.FromSeconds(0.5), TestContext.Current.CancellationToken);
 
+        // ACT
         await tableDependency.StopAsync();
 
         await ModifyTableContent();
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+        // ASSERT
         Assert.True(await AreAllDbObjectDisposedAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
     }
@@ -137,6 +143,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestCleanUpAfterHugeInserts()
     {
+        // ARRANGE
         var mapper = new ModelToTableMapper<DatabaseObjectCleanUpTestSqlServerModel>();
         mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
@@ -153,12 +160,14 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
         await Task.Delay(TimeSpan.FromSeconds(0.5), TestContext.Current.CancellationToken);
 
+        // ACT
         await tableDependency.StopAsync();
 
         await BigModifyTableContent();
 
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+        // ASSERT
         Assert.True(await AreAllDbObjectDisposedAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(dbObjectsNaming, TestContext.Current.CancellationToken));
     }
@@ -166,6 +175,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestStopWhileStillInserting()
     {
+        // ARRANGE
         var tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
             ConnectionString,
             tableName: TableName,
@@ -178,6 +188,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
         await Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
 
+        // ACT
         // Run async tasks insering 100 rows in table every 250 milliseconds
         var task1 = ModifyTableContent();
         var task2 = ModifyTableContent();
@@ -188,6 +199,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         await tableDependency.StopAsync();
         await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
+        // ASSERT
         // Even if the background thread is still inserting data in table, db objects must be removed
         Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
@@ -200,11 +212,13 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestCollapsingIsolatedContext()
     {
+        // ARRANGE
         // Run async tasks insering 100 rows in table every 250 milliseconds
         var task1 = ModifyTableContent();
         var task2 = ModifyTableContent();
         var task3 = ModifyTableContent();
 
+        // ACT
         // Execute the logic in a separate method scope
         // This unloads the ALC
         (var naming, var alcWeakRef) = await ExecuteInIsolatedContext();
@@ -219,6 +233,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         }
 
+        // ASSERT
         Assert.False(alcWeakRef.IsAlive, "The AssemblyLoadContext failed to unload after disposal.");
 
         // Even if the background thread is still inserting data in table, db objects must be removed
@@ -290,6 +305,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestCrashCleanupWithoutDispose()
     {
+        // ARRANGE
         var cts = new CancellationTokenSource();
         var modifyTask = ModifyTableContentContinuously(cts.Token);
 
@@ -298,9 +314,11 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             const int timeoutSeconds = 60;
             const int watchdogTimeoutSeconds = 180;
 
+            // ACT
             var naming = await ExecuteCrashSimulationAsync(timeoutSeconds, watchdogTimeoutSeconds, TestContext.Current.CancellationToken);
             await Task.Delay(TimeSpan.FromSeconds(watchdogTimeoutSeconds + 5), TestContext.Current.CancellationToken);
 
+            // ASSERT
             // Even if the background thread is still inserting data in table, db objects must be removed
             Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
             Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
@@ -384,6 +402,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestThrowExceptionInCreateSqlServerDatabaseObjects()
     {
+        // ARRANGE
         SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>? tableDependency = null;
         string objectNaming = string.Empty;
         Exception? ex = null;
@@ -399,6 +418,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             tableDependency.OnChanged += _ => { };
             objectNaming = tableDependency.NamingPrefix;
 
+            // ACT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
         }
         catch (Exception e)
@@ -411,6 +431,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         // Exception thrown in ConfigureAsync
         Assert.NotNull(ex);
 
@@ -421,6 +442,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestThrowExceptionInWaitForNotificationsPoint3()
     {
+        // ARRANGE
         SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>? tableDependency = null;
         string objectNaming = string.Empty;
         Exception? ex = null;
@@ -439,6 +461,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await SmallModifyTableContent(); // Needed to trigger reader
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -448,6 +471,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotNull(ex);
 
         Assert.True(await AreAllDbObjectDisposedAsync(objectNaming, TestContext.Current.CancellationToken));
@@ -457,6 +481,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestThrowExceptionInWaitForNotificationsPoint2()
     {
+        // ARRANGE
         SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>? tableDependency = null;
         string objectNaming = string.Empty;
         Exception? ex = null;
@@ -473,6 +498,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             tableDependency.OnExceptionAsync = async e => ex = e.Exception;
             objectNaming = tableDependency.NamingPrefix;
 
+            // ACT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -482,6 +508,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotNull(ex);
 
         Assert.True(await AreAllDbObjectDisposedAsync(objectNaming, TestContext.Current.CancellationToken));
@@ -491,6 +518,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestThrowExceptionInWaitForNotificationsPoint1()
     {
+        // ARRANGE
         SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>? tableDependency = null;
         string objectNaming = string.Empty;
         Exception? ex = null;
@@ -507,6 +535,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             tableDependency.OnException += e => ex = e.Exception;
             objectNaming = tableDependency.NamingPrefix;
 
+            // ACT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -516,6 +545,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotNull(ex);
 
         Assert.True(await AreAllDbObjectDisposedAsync(objectNaming, TestContext.Current.CancellationToken));
@@ -525,6 +555,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     [Fact]
     public async Task TestStartWithError()
     {
+        // ARRANGE
         SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>? tableDependency = null;
         string objectNaming = string.Empty;
         Exception? ex = null;
@@ -539,6 +570,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
             objectNaming = tableDependency.NamingPrefix;
 
+            // ACT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -552,6 +584,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotNull(ex);
 
         Assert.True(await AreAllDbObjectDisposedAsync(objectNaming, TestContext.Current.CancellationToken));

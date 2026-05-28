@@ -82,6 +82,7 @@ public class TransactionTest2(DatabaseFixture databaseFixture) : SqlTableDepende
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<TransactionTestSqlServer2Model>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
@@ -91,6 +92,7 @@ public class TransactionTest2(DatabaseFixture databaseFixture) : SqlTableDepende
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -100,6 +102,7 @@ public class TransactionTest2(DatabaseFixture databaseFixture) : SqlTableDepende
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
         Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));

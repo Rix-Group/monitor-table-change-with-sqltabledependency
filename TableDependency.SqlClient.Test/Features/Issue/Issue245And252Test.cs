@@ -79,11 +79,13 @@ public class Issue245And252Test(DatabaseFixture databaseFixture) : SqlTableDepen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue245And52Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -93,6 +95,7 @@ public class Issue245And252Test(DatabaseFixture databaseFixture) : SqlTableDepen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1._First_Name_, _checkValues[ChangeType.Insert].Item2._First_Name_);
         Assert.Equal(_checkValues[ChangeType.Update].Item1._First_Name_, _checkValues[ChangeType.Update].Item2._First_Name_);

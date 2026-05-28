@@ -87,6 +87,7 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
 
         try
         {
+            // ARRANGE
             var persistentId = $"recovery_{Guid.NewGuid():N}";
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
                 ConnectionString,
@@ -124,6 +125,7 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
             Assert.Equal(1, baselineCounts.Contract);
             Assert.True(baselineCounts.MessageTypes > 0);
 
+            // ACT
             // Drop Resources
             if (dropTrigger)
                 await DropTriggerAsync(sqlCommand, naming, schemaName);
@@ -149,6 +151,7 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
             if (dropMessageTypes)
                 await DropMessageTypesAsync(sqlCommand, naming);
 
+            // ASSERT
             // Check that only what we dropped is dropped
             var missingCounts = await GetDatabaseObjectCountsAsync(sqlCommand, naming, schemaName);
             Assert.Equal(dropTrigger ? 0 : baselineCounts.Trigger, missingCounts.Trigger);

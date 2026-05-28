@@ -79,11 +79,13 @@ public class MassiveChangesTest(DatabaseFixture databaseFixture) : SqlTableDepen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MassiveChangesModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         }
@@ -93,6 +95,7 @@ public class MassiveChangesTest(DatabaseFixture databaseFixture) : SqlTableDepen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(_checkValues[ChangeType.Insert].All(m => m is { Id: 1, Name: "Luciano Bruschi" }));
         Assert.Equal(ChangesNumber, _checkValues[ChangeType.Insert].Count);
         Assert.True(_checkValues[ChangeType.Update].All(m => m is { Id: 2, Name: "Ceccarelli Velia" }));

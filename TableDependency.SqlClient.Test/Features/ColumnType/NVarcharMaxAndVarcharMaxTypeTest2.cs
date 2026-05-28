@@ -78,11 +78,13 @@ public class NVarcharMaxAndVarcharMaxTypeTest2(DatabaseFixture databaseFixture) 
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<NVarcharMaxAndVarcharMaxType2Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -92,6 +94,7 @@ public class NVarcharMaxAndVarcharMaxTypeTest2(DatabaseFixture databaseFixture) 
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.VarcharMaxColumn, _checkValues[ChangeType.Insert].Item2.VarcharMaxColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.NvarcharMaxColumn, _checkValues[ChangeType.Insert].Item2.NvarcharMaxColumn);
 

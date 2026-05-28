@@ -83,11 +83,13 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             var t1 = ModifyTableContent1();
             var t2 = ModifyTableContent2();
 
@@ -100,6 +102,7 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(_checkValues[ChangeType.Insert].All(m => m is { Id: 1 or 3, Name: "Luciano Bruschi" or "Dina Bruschi" }));
         Assert.Equal(20, _checkValues[ChangeType.Insert].Count);
         Assert.False(_checkValuesOld.ContainsKey(ChangeType.Insert));
@@ -124,11 +127,13 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             var t1 = ModifyTableContent1();
             var t2 = ModifyTableContent2();
 
@@ -141,6 +146,7 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.True(_checkValues[ChangeType.Insert].All(m => m is { Id: 1 or 3, Name: "Luciano Bruschi" or "Dina Bruschi" }));
         Assert.Equal(20, _checkValues[ChangeType.Insert].Count);
         Assert.False(_checkValuesOld.ContainsKey(ChangeType.Insert));

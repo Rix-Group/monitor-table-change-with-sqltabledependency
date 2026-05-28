@@ -83,6 +83,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
     [Fact]
     public async Task Test1()
     {
+        // ARRANGE
         SqlTableDependency<CultureInfoTestModel>? tableDependency = null;
         string naming;
 
@@ -99,6 +100,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -108,6 +110,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter1);
 
         Assert.Equal("Christian", CheckValues1[ChangeType.Insert].Name);
@@ -126,6 +129,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
     [Fact]
     public async Task Test2()
     {
+        // ARRANGE
         SqlTableDependency<CultureInfoTestModel>? tableDependency = null;
         string naming;
 
@@ -142,6 +146,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -151,6 +156,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter2);
 
         Assert.Equal("Christian", CheckValues2[ChangeType.Insert].Name);

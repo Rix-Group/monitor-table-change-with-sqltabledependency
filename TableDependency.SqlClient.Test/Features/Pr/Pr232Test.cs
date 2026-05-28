@@ -73,6 +73,7 @@ public class Pr232(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(ConnectionString, persistentId: "persistent", ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += OnChanged;
@@ -82,10 +83,13 @@ public class Pr232(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest
             Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
             Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
 
+            // ACT
             // Check stop doesn't drop objects and conversation
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+
+            // ASSERT
             Assert.Equal(1, _changes[ChangeType.Insert]);
             Assert.Equal(1, _changes[ChangeType.Update]);
             Assert.Equal(1, _changes[ChangeType.Delete]);

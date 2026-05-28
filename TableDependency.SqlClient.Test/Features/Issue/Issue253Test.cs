@@ -71,6 +71,7 @@ public class Issue253Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue253Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
 
             tableDependency.OnChanged += _ => { };
@@ -82,6 +83,7 @@ public class Issue253Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
             TaskScheduler.UnobservedTaskException += TaskSchedulerOnUnobservedTaskException;
             try
             {
+                // ACT
                 await tableDependency.StopAsync();
 
                 await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
@@ -94,6 +96,7 @@ public class Issue253Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 TaskScheduler.UnobservedTaskException -= TaskSchedulerOnUnobservedTaskException;
             }
 
+            // ASSERT
             Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
             Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
         }

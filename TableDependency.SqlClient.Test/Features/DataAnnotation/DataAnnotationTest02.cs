@@ -85,6 +85,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<DataAnnotationTestSqlServer2Model>? tableDependency = null;
         string naming;
 
@@ -98,6 +99,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -107,6 +109,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -128,6 +131,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
     [Fact]
     public async Task TestWithOldEntity()
     {
+        // ARRANGE
         SqlTableDependency<DataAnnotationTestSqlServer2Model>? tableDependency = null;
         string naming;
 
@@ -141,6 +145,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -150,6 +155,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

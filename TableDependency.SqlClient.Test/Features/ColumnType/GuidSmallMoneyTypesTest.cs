@@ -97,11 +97,13 @@ public class GuidSmallMoneyTypesTest(DatabaseFixture databaseFixture) : SqlTable
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<GuidSmallMoneyTypesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -111,6 +113,7 @@ public class GuidSmallMoneyTypesTest(DatabaseFixture databaseFixture) : SqlTable
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.UniqueidentifierColumn, _checkValues[ChangeType.Insert].Item2.UniqueidentifierColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Time7Column, _checkValues[ChangeType.Insert].Item2.Time7Column);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.TinyintColumn, _checkValues[ChangeType.Insert].Item2.TinyintColumn);
@@ -150,11 +153,13 @@ public class GuidSmallMoneyTypesTest(DatabaseFixture databaseFixture) : SqlTable
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<GuidSmallMoneyTypesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -164,6 +169,7 @@ public class GuidSmallMoneyTypesTest(DatabaseFixture databaseFixture) : SqlTable
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.UniqueidentifierColumn, _checkValues[ChangeType.Insert].Item2.UniqueidentifierColumn);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Time7Column, _checkValues[ChangeType.Insert].Item2.Time7Column);
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.TinyintColumn, _checkValues[ChangeType.Insert].Item2.TinyintColumn);

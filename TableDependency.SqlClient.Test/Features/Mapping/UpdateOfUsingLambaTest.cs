@@ -86,6 +86,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>? tableDependency = null;
         string naming;
 
@@ -99,6 +100,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -108,6 +110,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -129,6 +132,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task TestWithOldEntity()
     {
+        // ARRANGE
         SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>? tableDependency = null;
         string naming;
 
@@ -142,6 +146,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -151,6 +156,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

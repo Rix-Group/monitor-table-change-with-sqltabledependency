@@ -91,6 +91,7 @@ public class BuilderTests(DatabaseFixture databaseFixture) : SqlTableDependencyB
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(ConnectionString);
@@ -106,9 +107,11 @@ public class BuilderTests(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ACT
             tableDependency = await builder.BuildAsync(logger, TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ASSERT
             Assert.NotNull(tableDependency);
             Assert.Equal(SchemaName, tableDependency.SchemaName);
             Assert.Equal(TableName, tableDependency.TableName);

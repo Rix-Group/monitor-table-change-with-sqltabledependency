@@ -78,6 +78,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
@@ -86,6 +87,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -95,6 +97,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
         Assert.Equal(_checkValues[0].Item1.Name, _checkValues[0].Item2.Name);
         Assert.Equal(_checkValues[0].Item1.Surname, _checkValues[0].Item2.Surname);
@@ -149,6 +152,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
@@ -157,6 +161,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -166,6 +171,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(2, _counter);
         Assert.Equal(_checkValues[0].Item1.Name, _checkValues[0].Item2.Name);
         Assert.Equal(_checkValues[0].Item1.Surname, _checkValues[0].Item2.Surname);
@@ -220,6 +226,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
@@ -228,6 +235,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent3();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -237,6 +245,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(0, _counter);
         Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));

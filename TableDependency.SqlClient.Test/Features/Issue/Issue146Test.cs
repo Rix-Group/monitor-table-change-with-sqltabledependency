@@ -84,6 +84,7 @@ public class Issue146Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<Bank>();
             mapper.AddMapping(c => c.Id, "IdBank"); // dbo,Bank.IdBank (PK, int, not null)
             mapper.AddMapping(c => c.Name, "BankName");
@@ -94,6 +95,7 @@ public class Issue146Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -103,6 +105,7 @@ public class Issue146Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues[ChangeType.Insert][0].Id);
         Assert.Equal("UBS bank", _checkValues[ChangeType.Insert][0].Name);
         Assert.Equal("THE UBS bank", _checkValues[ChangeType.Insert][0].Description);

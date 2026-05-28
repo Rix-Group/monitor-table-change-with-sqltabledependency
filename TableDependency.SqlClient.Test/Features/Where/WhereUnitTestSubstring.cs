@@ -37,13 +37,13 @@ public class WhereUnitTestSubstring
     [Fact]
     public void SubstringTests1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.Substring(0, 3) == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(SUBSTRING([Code], 0, 3) = '123')", where);
     }
 }

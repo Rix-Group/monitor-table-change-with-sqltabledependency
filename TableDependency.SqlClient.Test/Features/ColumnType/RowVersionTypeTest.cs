@@ -77,10 +77,12 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -90,6 +92,7 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotEqual(_rowVersionInsert, _rowVersionUpdate);
         Assert.Null(_rowVersionInsertOld);
         Assert.Null(_rowVersionUpdateOld);
@@ -102,10 +105,12 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -115,6 +120,7 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.NotEqual(_rowVersionInsert, _rowVersionUpdate);
         Assert.True(_rowVersionUpdateOld.SequenceEqual(_rowVersionInsert));
     }

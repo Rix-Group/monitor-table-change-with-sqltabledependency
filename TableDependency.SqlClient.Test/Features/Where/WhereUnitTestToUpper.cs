@@ -37,13 +37,13 @@ public class WhereUnitTestToUpper
     [Fact]
     public void ToUpper1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.ToUpper() == "123";
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("(UPPER([Code]) = '123')", where);
     }
 }

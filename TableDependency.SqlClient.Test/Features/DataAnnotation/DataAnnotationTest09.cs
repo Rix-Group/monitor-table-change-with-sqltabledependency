@@ -88,6 +88,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<DataAnnotationTestSqlServer9Model>();
             mapper.AddMapping(c => c.Description, "Long Description");
 
@@ -102,6 +103,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -111,6 +113,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -137,6 +140,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<DataAnnotationTestSqlServer9Model>();
             mapper.AddMapping(c => c.Description, "Long Description");
 
@@ -152,6 +156,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -161,6 +166,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

@@ -46,6 +46,7 @@ public class OldTypesPrimaryKeysTest(DatabaseFixture databaseFixture) : SqlTable
     [InlineData("CURSOR")]
     public async Task PrimaryKeyIsRejected(string sqlTypeName)
     {
+        // ARRANGE
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
@@ -54,6 +55,7 @@ public class OldTypesPrimaryKeysTest(DatabaseFixture databaseFixture) : SqlTable
             await using var sqlCommand = sqlConnection.CreateCommand();
             sqlCommand.CommandText = $"CREATE TABLE [{TableName}] ([MyKey] {sqlTypeName} NOT NULL PRIMARY KEY, [Description] NVARCHAR(100) NULL)";
 
+            // ACT / ASSERT
             await Assert.ThrowsAsync<SqlException>(() => sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
         }
         finally

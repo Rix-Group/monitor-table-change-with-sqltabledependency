@@ -120,6 +120,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<WithDataAnnotationTestModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 filter: filterExpression,
@@ -130,6 +131,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -139,6 +141,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Identificator, _checkValues[ChangeType.Insert].Item2.Identificator);
@@ -167,6 +170,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<WithDataAnnotationTestModel>.CreateSqlTableDependencyAsync(
                 ConnectionString,
                 filter: filterExpression,
@@ -177,6 +181,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -186,6 +191,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Identificator, _checkValues[ChangeType.Insert].Item2.Identificator);

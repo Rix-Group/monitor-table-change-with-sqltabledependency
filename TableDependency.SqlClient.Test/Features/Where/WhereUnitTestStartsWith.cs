@@ -37,78 +37,78 @@ public class WhereUnitTestStartsWith
     [Fact]
     public void StartsWith1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.StartsWith("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Code] LIKE '123%'", where);
     }
 
     [Fact]
     public void EndsWith1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.EndsWith("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("[Code] LIKE '%123'", where);
     }
 
     [Fact]
     public void StartsAndEndsWith1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.EndsWith("123") && p.Code.StartsWith("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Code] LIKE '%123' AND [Code] LIKE '123%')", where);
     }
 
     [Fact]
     public void StartsAndEndsWith2()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => (p.Code.EndsWith("123")) && (p.Code.StartsWith("123"));
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Code] LIKE '%123' AND [Code] LIKE '123%')", where);
     }
 
     [Fact]
     public void StartsOrEndsWith1()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.EndsWith("123") || p.Code.StartsWith("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Code] LIKE '%123' OR [Code] LIKE '123%')", where);
     }
 
     [Fact]
     public void EndsOrStartsWith2()
     {
-        // Arrange
+        // ARRANGE
         Expression<Func<Product, bool>> expression = p => p.Code.StartsWith("123") || p.Code.EndsWith("123");
 
-        // Act
+        // ACT
         var where = new SqlTableDependencyFilter<Product>(expression).Translate();
 
-        // Assert
+        // ASSERT
         Assert.Equal("([Code] LIKE '123%' OR [Code] LIKE '%123')", where);
     }
 }

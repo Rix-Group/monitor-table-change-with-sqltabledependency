@@ -89,6 +89,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<TableWithSpacesModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
@@ -97,6 +98,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -106,6 +108,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);
@@ -132,6 +135,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<TableWithSpacesModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
@@ -140,6 +144,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -149,6 +154,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal(_checkValues[ChangeType.Insert].Item1.Name, _checkValues[ChangeType.Insert].Item2.Name);

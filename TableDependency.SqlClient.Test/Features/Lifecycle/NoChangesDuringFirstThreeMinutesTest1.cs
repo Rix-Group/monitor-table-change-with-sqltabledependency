@@ -71,6 +71,7 @@ public class NoChangesDuringFirstThreeMinutesTest1(DatabaseFixture databaseFixtu
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         _checkValues.Add(ChangeType.Insert, (new() { Id = 23, Name = "Pizza Mergherita", Surname = "Pizza Mergherita" }, new()));
         _checkValues.Add(ChangeType.Update, (new() { Id = 23, Name = "Pizza Funghi", Surname = "Pizza Mergherita" }, new()));
         _checkValues.Add(ChangeType.Delete, (new() { Id = 23, Name = "Pizza Funghi", Surname = "Pizza Funghi" }, new()));
@@ -85,6 +86,7 @@ public class NoChangesDuringFirstThreeMinutesTest1(DatabaseFixture databaseFixtu
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             dataBaseObjectsNamingConvention = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromMinutes(4), TestContext.Current.CancellationToken);
         }
@@ -94,6 +96,7 @@ public class NoChangesDuringFirstThreeMinutesTest1(DatabaseFixture databaseFixtu
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(3, _counter);
 
         Assert.Equal("Pizza Mergherita", _checkValues[ChangeType.Insert].Item2.Name);

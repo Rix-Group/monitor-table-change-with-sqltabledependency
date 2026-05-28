@@ -112,11 +112,13 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Issue66Model1>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName + "1", includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -126,6 +128,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues1[ChangeType.Insert][0].Id);
         Assert.Equal("CHRISTIAN", _checkValues1[ChangeType.Insert][0].Name);
         Assert.Equal("LAVENA PONTE TRESA", _checkValues1[ChangeType.Insert][0].City);
@@ -150,6 +153,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test2()
     {
+        // ARRANGE
         SqlTableDependency<Issue66Model2>? tableDependency = null;
         string naming;
 
@@ -167,6 +171,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -176,6 +181,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues2[ChangeType.Insert][0].Id);
         Assert.Equal("CHRISTIAN", _checkValues2[ChangeType.Insert][0].Name);
         Assert.Equal("LAVENA PONTE TRESA", _checkValues2[ChangeType.Insert][0].City);
@@ -202,6 +208,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test3()
     {
+        // ARRANGE
         SqlTableDependency<Issue66Model2>? tableDependency = null;
         string naming;
 
@@ -215,6 +222,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent2();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -224,6 +232,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues2[ChangeType.Insert][0].Id);
         Assert.Equal("CHRISTIAN", _checkValues2[ChangeType.Insert][0].Name);
         Assert.Equal("LAVENA PONTE TRESA", _checkValues2[ChangeType.Insert][0].City);
@@ -250,6 +259,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test4()
     {
+        // ARRANGE
         SqlTableDependency<Issue66Model1>? tableDependency = null;
         string naming;
 
@@ -264,6 +274,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent1();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -273,6 +284,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal(1, _checkValues1[ChangeType.Insert][0].Id);
         Assert.Equal("CHRISTIAN", _checkValues1[ChangeType.Insert][0].Name);
         Assert.Equal("LAVENA PONTE TRESA", _checkValues1[ChangeType.Insert][0].City);
@@ -297,6 +309,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test5()
     {
+        // ARRANGE
         SqlTableDependency<Issue66Model2>? tableDependency = null;
         string naming;
 
@@ -324,6 +337,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent5();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -333,6 +347,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Empty(_checkValues2[ChangeType.Insert]);
 
         Assert.Single(_checkValues2[ChangeType.Update]);
@@ -359,6 +374,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
     [Fact]
     public async Task Test6()
     {
+        // ARRANGE
         SqlTableDependency<Issue66Model2>? tableDependency = null;
         string naming;
 
@@ -387,6 +403,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent5();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -396,6 +413,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Empty(_checkValues2[ChangeType.Insert]);
 
         Assert.Single(_checkValues2[ChangeType.Update]);

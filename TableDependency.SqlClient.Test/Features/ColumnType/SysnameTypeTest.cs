@@ -78,11 +78,13 @@ public class SysnameTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<SysnameTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -92,6 +94,7 @@ public class SysnameTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal("Alpha", _checkValues[ChangeType.Insert].Name);
         Assert.Equal("Beta", _checkValues[ChangeType.Update].Name);
         Assert.Equal("Beta", _checkValues[ChangeType.Delete].Name);

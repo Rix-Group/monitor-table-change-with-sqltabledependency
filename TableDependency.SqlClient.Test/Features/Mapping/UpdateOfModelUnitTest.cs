@@ -42,10 +42,13 @@ public class UpdateOfModelUnitTest
     [Fact]
     public void Add_AddsPropertyInfos()
     {
+        // ARRANGE
         var updateOf = new UpdateOfModel<SampleModel>();
 
+        // ACT
         updateOf.Add(model => model.Id, model => model.Name);
 
+        // ASSERT
         Assert.Collection(updateOf.PropertyInfo,
             p => Assert.Equal(nameof(SampleModel.Id), p.Name),
             p => Assert.Equal(nameof(SampleModel.Name), p.Name));
@@ -54,19 +57,27 @@ public class UpdateOfModelUnitTest
     [Fact]
     public void Add_EmptyArray_Throws()
     {
+        // ARRANGE
         var updateOf = new UpdateOfModel<SampleModel>();
 
+        // ACT
         var ex = Assert.Throws<UpdateOfModelException>(() => updateOf.Add());
+
+        // ASSERT
         Assert.Equal("UpdateOfModel cannot be empty.", ex.Message);
     }
 
     [Fact]
     public void Add_InvalidExpression_Throws()
     {
+        // ARRANGE
         var updateOf = new UpdateOfModel<SampleModel>();
         Expression<Func<SampleModel, object>> expression = model => new { model.Id };
 
+        // ACT
         var ex = Assert.Throws<UpdateOfModelException>(() => updateOf.Add(expression));
+
+        // ASSERT
         Assert.Equal("'expression' parameter should be a member expression.", ex.Message);
     }
 }

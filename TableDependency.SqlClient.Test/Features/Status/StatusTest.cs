@@ -82,6 +82,7 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<StatusTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
@@ -93,12 +94,14 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
 
             await _tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             var t = ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
             await _tableDependency.StopAsync();
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
+            // ASSERT
             Assert.True(_statuses[TableDependencyStatus.Starting]);
             Assert.True(_statuses[TableDependencyStatus.Started]);
             Assert.True(_statuses[TableDependencyStatus.WaitingForNotification]);
@@ -129,6 +132,7 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
 
         try
         {
+            // ARRANGE
             var mapper = new ModelToTableMapper<StatusTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
@@ -140,12 +144,14 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
 
             await _tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
+            // ACT
             var t = ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
             await _tableDependency.StopAsync();
             await Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
+            // ASSERT
             Assert.True(_statuses[TableDependencyStatus.Starting]);
             Assert.True(_statuses[TableDependencyStatus.Started]);
             Assert.True(_statuses[TableDependencyStatus.WaitingForNotification]);

@@ -78,11 +78,13 @@ public class JsonTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<JsonTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
 
+            // ACT
             await ModifyTableContent();
             await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         }
@@ -92,6 +94,7 @@ public class JsonTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal("{\"id\":1,\"name\":\"alpha\"}", _checkValues[ChangeType.Insert].Payload);
         Assert.Equal("{\"id\":2,\"name\":\"beta\"}", _checkValues[ChangeType.Update].Payload);
         Assert.Equal("{\"id\":2,\"name\":\"beta\"}", _checkValues[ChangeType.Delete].Payload);

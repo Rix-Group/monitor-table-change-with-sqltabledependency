@@ -73,11 +73,13 @@ public class DataAnnotationTest03(DatabaseFixture databaseFixture) : SqlTableDep
     [Fact]
     public async Task Test()
     {
+        // ARRANGE
         SqlTableDependency<DataAnnotationTestSqlServer3Model>? tableDependency = null;
         Exception? actualEx = null;
 
         try
         {
+            // ACT
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer3Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (ModelToTableMapperException ex)
@@ -90,6 +92,7 @@ public class DataAnnotationTest03(DatabaseFixture databaseFixture) : SqlTableDep
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Null(tableDependency);
         Assert.NotNull(actualEx);
         Assert.Equal("I cannot find any correspondence between defined ModelToTableMapper properties and database Table columns.", actualEx.Message);

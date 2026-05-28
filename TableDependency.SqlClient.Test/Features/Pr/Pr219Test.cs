@@ -72,7 +72,10 @@ public class Pr219Test(DatabaseFixture databaseFixture) : SqlTableDependencyBase
 
         try
         {
+            // ARRANGE
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(ConnectionString, schemaName: schemaName, tableName: tableName, ct: TestContext.Current.CancellationToken);
+
+            // ACT
             schemaName = tableDependency.SchemaName;
             tableName = tableDependency.TableName;
             naming = tableDependency.NamingPrefix;
@@ -83,6 +86,7 @@ public class Pr219Test(DatabaseFixture databaseFixture) : SqlTableDependencyBase
                 await tableDependency.DisposeAsync();
         }
 
+        // ASSERT
         Assert.Equal("dbo", schemaName);
         Assert.Equal(TableName, tableName);
 
