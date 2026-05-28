@@ -297,7 +297,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         LogDebug("Starting wait for notifications.");
         _task = WaitForNotificationsAsync(timeout, watchdogTimeout, _cancellationTokenSource.Token);
 
-        LogInformation("Waiting for receiving {0}'s records change notifications.", ("TableName", TableName));
+        LogInformation("Waiting for receiving {TableName}'s records change notifications.", ("TableName", TableName));
         if (waitForStop)
             await _task;
     }
@@ -534,7 +534,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_message_types WITH (NOLOCK) WHERE name = N'{message}')"
                 + $" CREATE MESSAGE TYPE [{message}] VALIDATION = NONE;";
             await sqlCommand.ExecuteNonQueryAsync(ct);
-            LogDebug("Message {0} created.", ("Message", message));
+            LogDebug("Message {Message} created.", ("Message", message));
         }
 
         // Contract
@@ -542,18 +542,18 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{NamingPrefix}')"
             + $" CREATE CONTRACT [{NamingPrefix}] ({contractBody})";
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Contract {0} created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Contract {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Queues
         sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{SchemaName}') AND name = N'{NamingPrefix}_Receiver')"
             + $" CREATE QUEUE [{SchemaName}].[{NamingPrefix}_Receiver] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Queue {0}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Queue {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
         sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{SchemaName}') AND name = N'{NamingPrefix}_Sender')"
             + $" CREATE QUEUE [{SchemaName}].[{NamingPrefix}_Sender] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Queue {0}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Queue {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Services
         sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
@@ -562,7 +562,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Sender')"
               + $" CREATE SERVICE [{NamingPrefix}_Sender] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{SchemaName}].[{NamingPrefix}_Sender];";
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Service broker {0}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Service broker {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
         sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
             ? $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
@@ -570,7 +570,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
               + $" CREATE SERVICE [{NamingPrefix}_Receiver] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{SchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Service broker {0}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Service broker {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Activation Store Procedure
         var dropMessages = string.Join(Environment.NewLine, _processableMessages.Select((pm, index) => index > 0
@@ -582,13 +582,13 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
         sqlCommand.CommandText = PrepareScriptProcedureQueueActivation(dropAllScript);
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Procedure {0} created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Procedure {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Begin conversation
         if (!_persisted)
         {
             _conversationHandle = await BeginConversationAsync(sqlCommand, ct);
-            LogDebug("Conversation with handler {0} started.", ("ConversationHandle", _conversationHandle.ToString()));
+            LogDebug("Conversation with handler {ConversationHandle} started.", ("ConversationHandle", _conversationHandle.ToString()));
         }
 
         // Trigger
@@ -608,7 +608,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         }
 
         await transaction.CommitAsync(ct);
-        LogInformation("All OK! Database objects ensured with naming {0}.", (nameof(NamingPrefix), NamingPrefix));
+        LogInformation("All OK! Database objects ensured with naming {NamingPrefix}.", (nameof(NamingPrefix), NamingPrefix));
 
         if (_persisted)
             await ReconnectToPersistedDatabaseObjectsAsync(ct);
@@ -634,7 +634,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         else
             _conversationHandle = await BeginConversationAsync(sqlCommand, ct);
 
-        LogInformation("Using persisted database objects with naming {0}.", (nameof(NamingPrefix), NamingPrefix));
+        LogInformation("Using persisted database objects with naming {NamingPrefix}.", (nameof(NamingPrefix), NamingPrefix));
     }
 
     private async Task CreateTriggerAsync(SqlCommand sqlCommand, CancellationToken ct)
@@ -707,7 +707,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             insertDmlScript);
 
         await sqlCommand.ExecuteNonQueryAsync(ct);
-        LogDebug("Trigger {0} created.", (nameof(NamingPrefix), NamingPrefix));
+        LogDebug("Trigger {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
     }
 
     private string PrepareDeclareVariableStatement()
@@ -975,9 +975,11 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             var messagesBag = CreateMessagesBag(Encoding, _processableMessages);
             var messageNumber = _userInterestedColumns.Count() * (_includeOldEntity ? 2 : 1) + 2;
 
-            var waitForSqlScript =
-                $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};"
-                + $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
+            // Arm the conversation timer each loop so an idle dialog eventually fires DialogTimer onto the _Sender queue.
+            // The activation procedure then ends that conversation; in persisted mode its drop-all script is empty, so the
+            // objects survive while the stale initiator dialog is retired (a non-persistent listener instead drops everything).
+            var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
+            var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
 
             await NotifyListenersAboutStatus(TableDependencyStatus.Started);
 
@@ -1015,12 +1017,12 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
                     // Ignore service broker messages
                     if (message.MessageType.StartsWith("http://schemas.microsoft.com/SQL/ServiceBroker/", StringComparison.OrdinalIgnoreCase))
                     {
-                        LogDebug("Ignored system Service Broker message type = {0}.", ("MessageType", message.MessageType));
+                        LogDebug("Ignored system Service Broker message type = {MessageType}.", ("MessageType", message.MessageType));
                         continue;
                     }
 
                     messagesBag.AddMessage(message);
-                    LogDebug("Received message type = {0}.", ("MessageType", message.MessageType));
+                    LogDebug("Received message type = {MessageType}.", ("MessageType", message.MessageType));
 
                     if (messagesBag.Status is MessagesBagStatus.Ready)
                     {
@@ -1129,20 +1131,21 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             .SetTag("tabledependency.persisted", _persisted);
     }
 
-    private void LogDebug(string message, params (string Name, string Value)[] values)
+    private void LogDebug(string message, params (string Name, object? Value)[] values)
         => LogToTelemetry(LogLevel.Debug, null, message, values);
 
-    private void LogInformation(string message, params (string Name, string Value)[] values)
+    private void LogInformation(string message, params (string Name, object? Value)[] values)
         => LogToTelemetry(LogLevel.Information, null, message, values);
 
-    private void LogError(Exception exception, string message, params (string Name, string Value)[] values)
+    private void LogError(Exception exception, string message, params (string Name, object? Value)[] values)
         => LogToTelemetry(LogLevel.Error, exception, message, values);
 
-    private void LogToTelemetry(LogLevel level, Exception? exception, string message, (string Name, string Value)[] values)
-    {
-        message = values.Length is 0 ? message : string.Format(message, [.. values.Select(v => v.Value)]);
+    private void LogToTelemetry(LogLevel level, Exception? exception, string template, (string Name, object? Value)[] values)
+        => LogToTelemetry(_logger, level, exception, template, values);
 
-        _logger?.Log(level, exception, message);
+    internal static void LogToTelemetry(ILogger? logger, LogLevel level, Exception? exception, string template, (string Name, object? Value)[] values)
+    {
+        logger?.Log(level, exception, template, [.. values.Select(v => v.Value)]);
 
         var activity = Activity.Current;
         if (activity is null)
@@ -1159,7 +1162,11 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         foreach (var (name, value) in values)
             tags[name] = value ?? "null";
 
-        activity.AddEvent(new ActivityEvent(message, tags: tags));
+        var eventName = values.Length is 0
+            ? template
+            : string.Format(template, [.. values.Select(v => v.Value)]);
+
+        activity.AddEvent(new ActivityEvent(eventName, tags: tags));
     }
 
     #endregion
