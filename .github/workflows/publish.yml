@@ -55,7 +55,7 @@ jobs:
             --results-directory TestResults
 
       - name: 📋 Publish Test Results
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.run_tests) }}
         with:
           name: Unit Tests
