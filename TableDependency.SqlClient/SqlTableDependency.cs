@@ -1170,9 +1170,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         foreach (var (name, value) in values)
             tags[name] = value ?? "null";
 
-        var eventName = values.Length is 0
-            ? template
-            : string.Format(template, [.. values.Select(v => v.Value)]);
+        var eventName = template;
+        foreach (var (name, value) in values)
+            eventName = eventName.Replace($"{{{name}}}", value?.ToString() ?? "null");
 
         activity.AddEvent(new ActivityEvent(eventName, tags: tags));
     }
