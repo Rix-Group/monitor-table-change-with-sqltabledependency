@@ -964,10 +964,6 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         int watchdogTimeout,
         CancellationToken ct)
     {
-        using var activity = StartActivity(nameof(WaitForNotificationsAsync))
-            ?.SetTag("tabledependency.timeout", timeout)
-            .SetTag("tabledependency.watchdogTimeout", watchdogTimeout);
-
         try
         {
             LogDebug("Get in WaitForNotifications.");
@@ -981,16 +977,26 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
             var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
 
-            await NotifyListenersAboutStatus(TableDependencyStatus.Started);
-
             await using var sqlConnection = new SqlConnection(_connectionString);
 
-            await sqlConnection.OpenAsync(ct);
-            LogDebug("Connection opened.");
-            await NotifyListenersAboutStatus(TableDependencyStatus.WaitingForNotification);
+            using (StartActivity(nameof(WaitForNotificationsAsync) + "Open database connection", startIndependentTrace: true)
+                ?.SetTag("tabledependency.timeout", timeout)
+                .SetTag("tabledependency.watchdogTimeout", watchdogTimeout))
+            {
+                await NotifyListenersAboutStatus(TableDependencyStatus.Started);
+
+                await sqlConnection.OpenAsync(ct);
+                LogDebug("Connection opened.");
+                await NotifyListenersAboutStatus(TableDependencyStatus.WaitingForNotification);
+            }
 
             while (true)
             {
+                // Each WAITFOR gets its own trace to not get one trace in otel
+                using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true)
+                    ?.SetTag("tabledependency.timeout", timeout)
+                    .SetTag("tabledependency.watchdogTimeout", watchdogTimeout);
+
                 await using var sqlCommand = sqlConnection.CreateCommand();
                 sqlCommand.CommandText = waitForSqlScript;
                 sqlCommand.CommandTimeout = 0;
@@ -1036,6 +1042,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         }
         catch (Exception exception)
         {
+            using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true);
+
             if (ct.IsCancellationRequested)
             {
                 await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToCancellation);
