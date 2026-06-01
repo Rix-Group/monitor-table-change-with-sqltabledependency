@@ -37,6 +37,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -80,6 +81,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     private readonly Regex _sqlAllowedChars = new(@"^[a-zA-Z]\w*(?: \w+)*$");
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _task;
+    internal volatile bool _shuttingDown;
+    private PosixSignalRegistration[] _shutdownSignalRegistrations = [];
     private string[] _processableMessages = [];
     private readonly bool _persisted;
     private readonly bool _isExpando;
@@ -165,7 +168,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     /// <param name="includeOldEntity">if set to <c>true</c>, include old entity.</param>
     /// <param name="persistentId">An id to append to the naming convention that enables queue persistence on restart.</param>
     /// <param name="ct">Cancellation token.</param>
-    public static async Task <SqlTableDependency<T>> CreateSqlTableDependencyAsync(
+    public static async Task<SqlTableDependency<T>> CreateSqlTableDependencyAsync(
         string connectionString,
         string? schemaName = null,
         string? tableName = null,
@@ -200,6 +203,27 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _isExpando = typeof(T) == typeof(ExpandoObject);
 
         NamingPrefix = $"{SchemaName}_{TableName}_{persistentId ?? Guid.NewGuid().ToString()}";
+    }
+
+    // Latch shutdown on a termination signal (it precedes the token cancel and socket teardown)
+    private PosixSignalRegistration[] RegisterShutdownSignals()
+    {
+        PosixSignal[] signals = [PosixSignal.SIGTERM, PosixSignal.SIGINT, PosixSignal.SIGQUIT];
+        List<PosixSignalRegistration> registrations = [];
+
+        foreach (var signal in signals)
+        {
+            try
+            {
+                registrations.Add(PosixSignalRegistration.Create(signal, _ => _shuttingDown = true));
+            }
+            catch (Exception exception) when (exception is PlatformNotSupportedException or ArgumentException)
+            {
+                // Signal unavailable on this platform
+            }
+        }
+
+        return [.. registrations];
     }
 
     private async Task ConfigureAsync(
@@ -293,6 +317,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _processableMessages = [.. BuildProcessableMessagesList()];
         await CreateDatabaseObjectsAsync(watchdogTimeout, ct);
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _shuttingDown = false;
+        _shutdownSignalRegistrations = RegisterShutdownSignals();
 
         LogDebug("Starting wait for notifications.");
         _task = WaitForNotificationsAsync(timeout, watchdogTimeout, _cancellationTokenSource.Token);
@@ -306,13 +332,23 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     {
         using var activity = StartActivity(nameof(StopAsync));
 
-        if (_task is not null)
+        try
         {
-            _cancellationTokenSource?.Cancel(true);
-            await _task;
-        }
+            if (_task is not null)
+            {
+                _cancellationTokenSource?.Cancel(true);
+                await _task;
+            }
 
-        _task = null;
+            _task = null;
+        }
+        finally
+        {
+        // Release the signal handlers so they stop rooting this instance once it is no longer listening.
+        foreach (var registration in _shutdownSignalRegistrations)
+                registration.Dispose();
+            _shutdownSignalRegistrations = [];
+        }
 
         LogInformation("Stopped waiting for notification.");
     }
@@ -964,6 +1000,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         int watchdogTimeout,
         CancellationToken ct)
     {
+        SqlConnection? sqlConnection = null;
+
         try
         {
             LogDebug("Get in WaitForNotifications.");
@@ -977,7 +1015,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
             var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
 
-            await using var sqlConnection = new SqlConnection(_connectionString);
+            sqlConnection = new SqlConnection(_connectionString);
 
             using (StartActivity(nameof(WaitForNotificationsAsync) + "Open database connection", startIndependentTrace: true)
                 ?.SetTag("tabledependency.timeout", timeout)
@@ -1044,10 +1082,16 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         {
             using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true);
 
+            // Benign only when the listener's own connection went down; a subscriber/mapper fault leaves it usable and still surfaces.
             if (ct.IsCancellationRequested)
             {
                 await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToCancellation);
                 LogInformation("Operation canceled.");
+            }
+            else if (_shuttingDown && sqlConnection is { State: ConnectionState.Closed or ConnectionState.Broken })
+            {
+                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToProcessShutdown);
+                LogInformation("Process shutting down; listener stopped.");
             }
             else
             {
@@ -1058,6 +1102,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         }
         finally
         {
+            if (sqlConnection is not null)
+                await sqlConnection.DisposeAsync();
+
             if (!_persisted)
                 await DropDatabaseObjectsAsync();
         }
