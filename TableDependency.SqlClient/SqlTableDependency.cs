@@ -317,6 +317,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _processableMessages = [.. BuildProcessableMessagesList()];
         await CreateDatabaseObjectsAsync(watchdogTimeout, ct);
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _shuttingDown = false;
         _shutdownSignalRegistrations = RegisterShutdownSignals();
 
         LogDebug("Starting wait for notifications.");
@@ -331,18 +332,23 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     {
         using var activity = StartActivity(nameof(StopAsync));
 
-        if (_task is not null)
+        try
         {
-            _cancellationTokenSource?.Cancel(true);
-            await _task;
+            if (_task is not null)
+            {
+                _cancellationTokenSource?.Cancel(true);
+                await _task;
+            }
+
+            _task = null;
         }
-
-        _task = null;
-
+        finally
+        {
         // Release the signal handlers so they stop rooting this instance once it is no longer listening.
         foreach (var registration in _shutdownSignalRegistrations)
-            registration.Dispose();
-        _shutdownSignalRegistrations = [];
+                registration.Dispose();
+            _shutdownSignalRegistrations = [];
+        }
 
         LogInformation("Stopped waiting for notification.");
     }
@@ -994,6 +1000,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         int watchdogTimeout,
         CancellationToken ct)
     {
+        SqlConnection? sqlConnection = null;
+
         try
         {
             LogDebug("Get in WaitForNotifications.");
@@ -1007,7 +1015,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
             var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
 
-            await using var sqlConnection = new SqlConnection(_connectionString);
+            sqlConnection = new SqlConnection(_connectionString);
 
             using (StartActivity(nameof(WaitForNotificationsAsync) + "Open database connection", startIndependentTrace: true)
                 ?.SetTag("tabledependency.timeout", timeout)
@@ -1074,10 +1082,16 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         {
             using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true);
 
-            if (ct.IsCancellationRequested || _shuttingDown)
+            // Benign only when the listener's own connection went down; a subscriber/mapper fault leaves it usable and still surfaces.
+            if (ct.IsCancellationRequested)
             {
                 await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToCancellation);
-                LogInformation(_shuttingDown && !ct.IsCancellationRequested ? "Process shutting down; listener stopped." : "Operation canceled.");
+                LogInformation("Operation canceled.");
+            }
+            else if (_shuttingDown && sqlConnection is { State: ConnectionState.Closed or ConnectionState.Broken })
+            {
+                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToProcessShutdown);
+                LogInformation("Process shutting down; listener stopped.");
             }
             else
             {
@@ -1088,6 +1102,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         }
         finally
         {
+            if (sqlConnection is not null)
+                await sqlConnection.DisposeAsync();
+
             if (!_persisted)
                 await DropDatabaseObjectsAsync();
         }

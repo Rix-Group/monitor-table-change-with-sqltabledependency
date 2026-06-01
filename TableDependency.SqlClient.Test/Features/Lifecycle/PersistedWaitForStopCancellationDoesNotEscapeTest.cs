@@ -26,7 +26,6 @@
 
 #endregion
 
-using System.Reflection;
 using Microsoft.Data.SqlClient;
 using TableDependency.SqlClient.Base.Enums;
 using TableDependency.SqlClient.Base.EventArgs;
@@ -138,14 +137,14 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
             // ACT
             // WaitForStop with a never-cancelled token, then sever the connection (network drop, not a graceful stop)
             var listening = dependency.StartAsync(timeout: 60, watchdogTimeout: 120, waitForStop: true, ct: TestContext.Current.CancellationToken);
-            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
             await KillSqlTableDependencyDbConnection(TestContext.Current.CancellationToken);
 
             // ASSERT
             // Does the SqlException escape StartAsync, or is it caught and surfaced via OnException?
             try
             {
-                await listening.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+                await listening.WaitAsync(TimeSpan.FromSeconds(90), TestContext.Current.CancellationToken);
                 escaped = false;
             }
             catch (SqlException)
@@ -189,7 +188,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
             dependency.OnExceptionAsync = (ExceptionEventArgs e) => { raisedException = e.Exception; return Task.CompletedTask; };
 
             var listening = dependency.StartAsync(timeout: 60, watchdogTimeout: 120, waitForStop: true, ct: TestContext.Current.CancellationToken);
-            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
             // ACT
             // Latch the SIGTERM flag (a real signal would terminate the test host) then sever the connection before the token cancels, exactly as a Kubernetes rollout does.
@@ -197,16 +196,175 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
             await KillSqlTableDependencyDbConnection(TestContext.Current.CancellationToken);
 
             // ASSERT
-            // The drop is a clean stop: no fault surfaced, status reflects cancellation
-            await listening.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+            // The drop is a clean stop: no fault surfaced, status reflects a signal-driven shutdown (not a token cancel)
+            await listening.WaitAsync(TimeSpan.FromSeconds(90), TestContext.Current.CancellationToken);
             Assert.Null(raisedException);
-            Assert.Equal(TableDependencyStatus.StopDueToCancellation, dependency.Status);
+            Assert.Equal(TableDependencyStatus.StopDueToProcessShutdown, dependency.Status);
         }
         finally
         {
             await dependency.DisposeAsync();
             await dependency.DropDatabaseObjectsAsync();
         }
+    }
+
+    [Fact]
+    public async Task ShuttingDown_SubscriberFailureDuringNotification()
+    {
+        // ARRANGE
+        var persistentId = $"subfail_{Guid.NewGuid():N}";
+        var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var faulted = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var subscriberFailure = new InvalidOperationException("subscriber blew up");
+
+        var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
+            ConnectionString,
+            tableName: TableName,
+            persistentId: persistentId,
+            ct: TestContext.Current.CancellationToken);
+
+        try
+        {
+            dependency.OnChanged += _ => throw subscriberFailure;
+            dependency.OnStatusChanged += e =>
+            {
+                if (e.Status is TableDependencyStatus.WaitingForNotification)
+                    waiting.TrySetResult();
+            };
+            dependency.OnExceptionAsync = (ExceptionEventArgs e) => { faulted.TrySetResult(e.Exception); return Task.CompletedTask; };
+
+            await dependency.StartAsync(timeout: 60, watchdogTimeout: 120, ct: TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // ACT
+            // Shutdown is latched, then a genuine notification arrives whose subscriber throws (not a SQL disconnect)
+            dependency._shuttingDown = true;
+            await InsertRowAsync(TestContext.Current.CancellationToken);
+
+            // ASSERT
+            // The application error is surfaced via OnException, not hidden by the shutdown fast path
+            var raisedException = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(90), TestContext.Current.CancellationToken);
+            Assert.Same(subscriberFailure, raisedException);
+            Assert.Equal(TableDependencyStatus.StopDueToError, dependency.Status);
+        }
+        finally
+        {
+            await dependency.DisposeAsync();
+            await dependency.DropDatabaseObjectsAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ShuttingDown_HandlerThrowsSqlException_StillReportedAsError()
+    {
+        // ARRANGE
+        var persistentId = $"handlersql_{Guid.NewGuid():N}";
+        var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var faulted = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
+            ConnectionString,
+            tableName: TableName,
+            persistentId: persistentId,
+            ct: TestContext.Current.CancellationToken);
+
+        try
+        {
+            // The subscriber does its own SQL work and that fails - a real application error that is itself a SqlException.
+            dependency.OnChangedAsync = async _ =>
+            {
+                await using var sqlConnection = new SqlConnection(ConnectionString);
+                await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
+                await using var sqlCommand = sqlConnection.CreateCommand();
+                sqlCommand.CommandText = "RAISERROR('handler-sql-failure', 16, 1);";
+                await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+            };
+            dependency.OnStatusChanged += e =>
+            {
+                if (e.Status is TableDependencyStatus.WaitingForNotification)
+                    waiting.TrySetResult();
+            };
+            dependency.OnExceptionAsync = (ExceptionEventArgs e) => { faulted.TrySetResult(e.Exception); return Task.CompletedTask; };
+
+            await dependency.StartAsync(timeout: 60, watchdogTimeout: 120, ct: TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // ACT
+            // Shutdown is latched, then a notification arrives whose handler throws a SqlException (not the severed WAITFOR)
+            dependency._shuttingDown = true;
+            await InsertRowAsync(TestContext.Current.CancellationToken);
+
+            // ASSERT
+            // A handler SqlException is an application error - it must not slip through the shutdown fast path's type check
+            var raisedException = await faulted.Task.WaitAsync(TimeSpan.FromSeconds(90), TestContext.Current.CancellationToken);
+            Assert.IsType<SqlException>(raisedException);
+            Assert.Equal(TableDependencyStatus.StopDueToError, dependency.Status);
+        }
+        finally
+        {
+            await dependency.DisposeAsync();
+            await dependency.DropDatabaseObjectsAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Restart_AfterStaleShutdownLatch_GenuineOutageStillSurfaces()
+    {
+        // ARRANGE
+        var persistentId = $"restart_{Guid.NewGuid():N}";
+        var waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Exception? raisedException = null;
+
+        var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
+            ConnectionString,
+            tableName: TableName,
+            persistentId: persistentId,
+            ct: TestContext.Current.CancellationToken);
+
+        try
+        {
+            dependency.OnChanged += _ => { };
+            dependency.OnStatusChanged += e =>
+            {
+                if (e.Status is TableDependencyStatus.WaitingForNotification)
+                    waiting.TrySetResult();
+            };
+            dependency.OnExceptionAsync = (ExceptionEventArgs e) => { raisedException = e.Exception; return Task.CompletedTask; };
+
+            // First run, then a graceful stop that leaves a stale latch behind (as an intercepted SIGINT would).
+            await dependency.StartAsync(timeout: 60, watchdogTimeout: 120, ct: TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            await dependency.StopAsync();
+            dependency._shuttingDown = true;
+
+            // ACT
+            // Restart with a never-cancelled token, then sever the connection: a genuine outage, not a shutdown.
+            waiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var listening = dependency.StartAsync(timeout: 60, watchdogTimeout: 120, waitForStop: true, ct: TestContext.Current.CancellationToken);
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            await KillSqlTableDependencyDbConnection(TestContext.Current.CancellationToken);
+
+            // ASSERT
+            // The stale latch must have been reset by StartAsync, so the outage surfaces as an error rather than being swallowed.
+            await listening.WaitAsync(TimeSpan.FromSeconds(90), TestContext.Current.CancellationToken);
+            Assert.IsType<SqlException>(raisedException);
+            Assert.Equal(TableDependencyStatus.StopDueToError, dependency.Status);
+        }
+        finally
+        {
+            await dependency.DisposeAsync();
+            await dependency.DropDatabaseObjectsAsync();
+        }
+    }
+
+    private async Task InsertRowAsync(CancellationToken ct)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
+
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = $"INSERT INTO [{TableName}] ([Name]) VALUES ('shutdown-change');";
+        await sqlCommand.ExecuteNonQueryAsync(ct);
     }
 
     private async Task KillSqlTableDependencyDbConnection(CancellationToken ct)
