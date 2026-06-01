@@ -37,6 +37,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -80,6 +81,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     private readonly Regex _sqlAllowedChars = new(@"^[a-zA-Z]\w*(?: \w+)*$");
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _task;
+    internal volatile bool _shuttingDown;
+    private PosixSignalRegistration[] _shutdownSignalRegistrations;
     private string[] _processableMessages = [];
     private readonly bool _persisted;
     private readonly bool _isExpando;
@@ -165,7 +168,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     /// <param name="includeOldEntity">if set to <c>true</c>, include old entity.</param>
     /// <param name="persistentId">An id to append to the naming convention that enables queue persistence on restart.</param>
     /// <param name="ct">Cancellation token.</param>
-    public static async Task <SqlTableDependency<T>> CreateSqlTableDependencyAsync(
+    public static async Task<SqlTableDependency<T>> CreateSqlTableDependencyAsync(
         string connectionString,
         string? schemaName = null,
         string? tableName = null,
@@ -200,6 +203,29 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _isExpando = typeof(T) == typeof(ExpandoObject);
 
         NamingPrefix = $"{SchemaName}_{TableName}_{persistentId ?? Guid.NewGuid().ToString()}";
+
+        // Latch shutdown on a termination signal (it precedes the token cancel and socket teardown)
+        _shutdownSignalRegistrations = RegisterShutdownSignals();
+    }
+
+    private PosixSignalRegistration[] RegisterShutdownSignals()
+    {
+        PosixSignal[] signals = [PosixSignal.SIGTERM, PosixSignal.SIGINT, PosixSignal.SIGQUIT];
+        List<PosixSignalRegistration> registrations = [];
+
+        foreach (var signal in signals)
+        {
+            try
+            {
+                registrations.Add(PosixSignalRegistration.Create(signal, _ => _shuttingDown = true));
+            }
+            catch (Exception exception) when (exception is PlatformNotSupportedException or ArgumentException)
+            {
+                // Signal unavailable on this platform
+            }
+        }
+
+        return [.. registrations];
     }
 
     private async Task ConfigureAsync(
@@ -321,6 +347,10 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     {
         await StopAsync();
         _cancellationTokenSource?.Dispose();
+
+        foreach (var registration in _shutdownSignalRegistrations)
+            registration.Dispose();
+        _shutdownSignalRegistrations = [];
 
         OnException = null;
         OnExceptionAsync = null;
@@ -1044,10 +1074,10 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         {
             using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true);
 
-            if (ct.IsCancellationRequested)
+            if (ct.IsCancellationRequested || _shuttingDown)
             {
                 await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToCancellation);
-                LogInformation("Operation canceled.");
+                LogInformation(_shuttingDown && !ct.IsCancellationRequested ? "Process shutting down; listener stopped." : "Operation canceled.");
             }
             else
             {
