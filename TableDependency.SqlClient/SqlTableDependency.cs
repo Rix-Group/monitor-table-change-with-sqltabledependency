@@ -82,7 +82,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _task;
     internal volatile bool _shuttingDown;
-    private PosixSignalRegistration[] _shutdownSignalRegistrations;
+    private PosixSignalRegistration[] _shutdownSignalRegistrations = [];
     private string[] _processableMessages = [];
     private readonly bool _persisted;
     private readonly bool _isExpando;
@@ -203,11 +203,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _isExpando = typeof(T) == typeof(ExpandoObject);
 
         NamingPrefix = $"{SchemaName}_{TableName}_{persistentId ?? Guid.NewGuid().ToString()}";
-
-        // Latch shutdown on a termination signal (it precedes the token cancel and socket teardown)
-        _shutdownSignalRegistrations = RegisterShutdownSignals();
     }
 
+    // Latch shutdown on a termination signal (it precedes the token cancel and socket teardown)
     private PosixSignalRegistration[] RegisterShutdownSignals()
     {
         PosixSignal[] signals = [PosixSignal.SIGTERM, PosixSignal.SIGINT, PosixSignal.SIGQUIT];
@@ -319,6 +317,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         _processableMessages = [.. BuildProcessableMessagesList()];
         await CreateDatabaseObjectsAsync(watchdogTimeout, ct);
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _shutdownSignalRegistrations = RegisterShutdownSignals();
 
         LogDebug("Starting wait for notifications.");
         _task = WaitForNotificationsAsync(timeout, watchdogTimeout, _cancellationTokenSource.Token);
@@ -340,6 +339,11 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
         _task = null;
 
+        // Release the signal handlers so they stop rooting this instance once it is no longer listening.
+        foreach (var registration in _shutdownSignalRegistrations)
+            registration.Dispose();
+        _shutdownSignalRegistrations = [];
+
         LogInformation("Stopped waiting for notification.");
     }
 
@@ -347,10 +351,6 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     {
         await StopAsync();
         _cancellationTokenSource?.Dispose();
-
-        foreach (var registration in _shutdownSignalRegistrations)
-            registration.Dispose();
-        _shutdownSignalRegistrations = [];
 
         OnException = null;
         OnExceptionAsync = null;
