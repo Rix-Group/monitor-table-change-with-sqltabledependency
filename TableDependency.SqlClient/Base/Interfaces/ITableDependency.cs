@@ -75,6 +75,11 @@ public interface ITableDependency<T> : IAsyncDisposable where T : class, new()
     #region Properties
 
     /// <summary>
+    /// Returns true if SIGTERM has been called.
+    /// </summary>
+    public bool ShuttingDown { get; }
+
+    /// <summary>
     /// Gets or sets the culture info. The default is the current cultuer.
     /// </summary>
     public CultureInfo CultureInfo { get; set; }

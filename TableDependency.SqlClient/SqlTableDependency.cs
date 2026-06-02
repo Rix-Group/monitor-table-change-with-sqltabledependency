@@ -105,9 +105,11 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     #region Interface Properties
 
+
+    public bool ShuttingDown => _shuttingDown;
     public CultureInfo CultureInfo { get; set; } = CultureInfo.CurrentCulture;
     public Encoding Encoding { get; set; } = Encoding.Unicode;
-    public string NamingPrefix { get; private set; }
+    public string NamingPrefix { get; }
     public TableDependencyStatus Status { get; private set; }
     public string SchemaName { get; }
     public string TableName { get; }
