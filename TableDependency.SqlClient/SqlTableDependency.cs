@@ -58,9 +58,15 @@ namespace TableDependency.SqlClient;
 
 public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class, new()
 {
+    #region Public Constants
+
+    public const string ActivitySourceName = nameof(SqlTableDependency<>);
+
+    #endregion
+
     #region Private Variables
 
-    private static readonly ActivitySource ActivitySource = new(nameof(SqlTableDependency<>));
+    private static readonly ActivitySource ActivitySource = new(ActivitySourceName);
 
     private readonly string _connectionString;
     private readonly string _server;
