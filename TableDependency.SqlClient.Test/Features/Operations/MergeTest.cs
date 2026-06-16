@@ -120,7 +120,7 @@ public class MergeTest(DatabaseFixture databaseFixture) : SqlTableDependencyBase
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<MergeTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TargetTableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MergeTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TargetTableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

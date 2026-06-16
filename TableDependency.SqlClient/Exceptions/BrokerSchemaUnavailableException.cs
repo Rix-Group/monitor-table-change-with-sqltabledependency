@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
@@ -27,19 +27,9 @@
 #endregion
 
 using System;
-using System.ComponentModel;
-using System.Linq;
+using TableDependency.SqlClient.Base.Exceptions;
 
-namespace TableDependency.SqlClient.Extensions;
+namespace TableDependency.SqlClient.Exceptions;
 
-internal static class EnumExtensions
-{
-    extension(Enum value)
-    {
-        public string GetDescriptionFromEnumValue()
-            => value.GetType()
-                .GetField(value.ToString())
-                ?.GetCustomAttributes(typeof(DescriptionAttribute), false)
-                .SingleOrDefault() is DescriptionAttribute attribute ? attribute.Description : value.ToString();
-    }
-}
+public sealed class BrokerSchemaUnavailableException(string schemaName, Exception innerException)
+    : TableDependencyException($"Broker schema '{schemaName}' does not exist and could not be created. Pre-create it owned by the application principal, or grant CREATE SCHEMA.", innerException);

@@ -82,7 +82,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
-            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -156,7 +156,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
-            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed2;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -230,7 +230,7 @@ public class NotificationOnlyWhenEntityIsDifferentFromOldEntityTest(DatabaseFixt
             var mapper = new ModelToTableMapper<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second NAME");
 
-            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<NotificationOnlyWhenEntityIsDifferentFromOldEntityModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed3;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

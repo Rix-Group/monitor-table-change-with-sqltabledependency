@@ -90,7 +90,7 @@ public class DateTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<DateTypeTestModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DateTypeTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 

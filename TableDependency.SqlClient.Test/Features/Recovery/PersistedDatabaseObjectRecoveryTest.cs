@@ -90,7 +90,7 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
             // ARRANGE
             var persistentId = $"recovery_{Guid.NewGuid():N}";
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 persistentId: persistentId,
                 ct: TestContext.Current.CancellationToken);

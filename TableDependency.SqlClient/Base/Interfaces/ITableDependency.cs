@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.

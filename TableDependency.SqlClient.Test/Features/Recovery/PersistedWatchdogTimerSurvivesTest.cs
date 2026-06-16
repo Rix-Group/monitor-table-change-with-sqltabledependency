@@ -78,7 +78,7 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
             // ARRANGE
             var persistentId = $"watchdog_{Guid.NewGuid():N}";
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 persistentId: persistentId,
                 ct: TestContext.Current.CancellationToken);

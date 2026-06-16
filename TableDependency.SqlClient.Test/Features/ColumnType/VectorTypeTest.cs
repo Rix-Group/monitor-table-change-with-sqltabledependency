@@ -81,7 +81,7 @@ public class VectorTypeTest(DatabaseFixture databaseFixture) : SqlTableDependenc
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<VectorTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<VectorTypeModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             naming = tableDependency.NamingPrefix;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

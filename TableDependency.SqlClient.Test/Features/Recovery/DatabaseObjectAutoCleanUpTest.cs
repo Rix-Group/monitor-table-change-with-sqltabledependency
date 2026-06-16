@@ -85,7 +85,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
         var tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             mapper: mapper,
             includeOldEntity: true,
@@ -117,7 +117,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
         var tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             mapper: mapper,
             includeOldEntity: true,
@@ -148,7 +148,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
         var tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             mapper: mapper,
             includeOldEntity: true,
@@ -177,7 +177,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
     {
         // ARRANGE
         var tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             ct: TestContext.Current.CancellationToken);
 
@@ -255,7 +255,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         var instance = Activator.CreateInstance(type!);
 
         var runTableDependencyMethod = type!.GetMethod(nameof(RunsInAnIsolatedContextCheckDatabaseObjectCleanUp.RunTableDependency));
-        var namingTask = (Task<string>)runTableDependencyMethod!.Invoke(instance, [ConnectionString, TableName])!;
+        var namingTask = (Task<string>)runTableDependencyMethod!.Invoke(instance, [DependencyConnectionString, TableName])!;
         var naming = await namingTask;
 
         // Request unload immediately before leaving the method
@@ -351,7 +351,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
 
         startInfo.ArgumentList.Add(crashSimPath);
         startInfo.ArgumentList.Add("--connectionString");
-        startInfo.ArgumentList.Add(ConnectionString);
+        startInfo.ArgumentList.Add(DependencyConnectionString);
         startInfo.ArgumentList.Add("--tableName");
         startInfo.ArgumentList.Add(TableName);
         startInfo.ArgumentList.Add("--timeout");
@@ -410,7 +410,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         try
         {
             tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 logger: new TestLogger(throwExceptionCreateSqlServerDatabaseObjects: true),
                 ct: TestContext.Current.CancellationToken);
@@ -450,7 +450,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         try
         {
             tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 logger: new TestLogger(throwExceptionInWaitForNotificationsPoint3: true),
                 ct: TestContext.Current.CancellationToken);
@@ -489,7 +489,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         try
         {
             tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 logger: new TestLogger(throwExceptionInWaitForNotificationsPoint2: true),
                 ct: TestContext.Current.CancellationToken);
@@ -526,7 +526,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         try
         {
             tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 logger: new TestLogger(throwExceptionInWaitForNotificationsPoint1: true),
                 ct: TestContext.Current.CancellationToken);
@@ -563,7 +563,7 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
         try
         {
             tableDependency = await SqlTableDependency<DatabaseObjectCleanUpTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 logger: new TestLogger(throwExceptionBeforeWaitForNotifications: true),
                 ct: TestContext.Current.CancellationToken);

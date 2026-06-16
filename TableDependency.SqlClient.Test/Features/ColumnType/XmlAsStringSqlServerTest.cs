@@ -92,7 +92,7 @@ public class XmlAsStringSqlServerTest(DatabaseFixture databaseFixture) : SqlTabl
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<XmlAsStringSqlServerTestModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<XmlAsStringSqlServerTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -133,7 +133,7 @@ public class XmlAsStringSqlServerTest(DatabaseFixture databaseFixture) : SqlTabl
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<XmlAsStringSqlServerTestModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<XmlAsStringSqlServerTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

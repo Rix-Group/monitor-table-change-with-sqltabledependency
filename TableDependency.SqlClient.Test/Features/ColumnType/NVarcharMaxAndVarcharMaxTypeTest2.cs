@@ -79,7 +79,7 @@ public class NVarcharMaxAndVarcharMaxTypeTest2(DatabaseFixture databaseFixture) 
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<NVarcharMaxAndVarcharMaxType2Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<NVarcharMaxAndVarcharMaxType2Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

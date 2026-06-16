@@ -86,7 +86,7 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
             var mapper = new ModelToTableMapper<StatusTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
-            _tableDependency = await SqlTableDependency<StatusTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            _tableDependency = await SqlTableDependency<StatusTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             _tableDependency.OnChanged += TableDependency_OnChanged;
             _tableDependency.OnStatusChanged += TableDependency_OnStatusChanged;
             _tableDependency.OnException += TableDependency_OnException;
@@ -136,7 +136,7 @@ public class StatusTest(DatabaseFixture databaseFixture) : SqlTableDependencyBas
             var mapper = new ModelToTableMapper<StatusTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
-            _tableDependency = await SqlTableDependency<StatusTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            _tableDependency = await SqlTableDependency<StatusTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             _tableDependency.OnChangedAsync = TableDependency_OnChangedAsync;
             _tableDependency.OnStatusChangedAsync = TableDependency_OnStatusChangedAsync;
             _tableDependency.OnExceptionAsync = TableDependency_OnExceptionAsync;

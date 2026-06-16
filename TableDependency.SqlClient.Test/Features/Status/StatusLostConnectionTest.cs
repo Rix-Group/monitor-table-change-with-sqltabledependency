@@ -85,7 +85,7 @@ public class StatusLostConnectionTest(DatabaseFixture databaseFixture) : SqlTabl
             var mapper = new ModelToTableMapper<StatusLostConnectionTestModel>();
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
-            _tableDependency = await SqlTableDependency<StatusLostConnectionTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            _tableDependency = await SqlTableDependency<StatusLostConnectionTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             _tableDependency.OnChanged += TableDependency_Changed;
             _tableDependency.OnStatusChanged += TableDependency_OnStatusChanged;
             _tableDependency.OnExceptionAsync = TableDependency_OnExceptionAsync; // Test using async exception handling
@@ -148,9 +148,9 @@ public class StatusLostConnectionTest(DatabaseFixture databaseFixture) : SqlTabl
 
     private async Task KillSqlTableDependencyDbConnection()
     {
-        var sqlConnectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
-        var initialCatalog = sqlConnectionStringBuilder.InitialCatalog;
-        var userId = sqlConnectionStringBuilder.UserID;
+        var initialCatalog = new SqlConnectionStringBuilder(ConnectionString).InitialCatalog;
+        // Kill the dependency's login (least-privilege), not the admin login the kill runs under.
+        var userId = new SqlConnectionStringBuilder(DependencyConnectionString).UserID;
 
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);

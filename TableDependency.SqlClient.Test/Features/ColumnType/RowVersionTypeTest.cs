@@ -78,7 +78,7 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 
@@ -106,7 +106,7 @@ public class RowVersionTypeTest(DatabaseFixture databaseFixture) : SqlTableDepen
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<RowVersionTypeModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 

@@ -27,20 +27,19 @@
 #endregion
 
 using Microsoft.Data.SqlClient;
-using TableDependency.SqlClient.Base.Exceptions;
 
-namespace TableDependency.SqlClient.Test.Features.DataAnnotation;
+namespace TableDependency.SqlClient.Test.Features.Misc;
 
-public class DataAnnotationTest07(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
+// Broker objects land in the broker schema (auto-detected default, or explicit override) while the trigger
+// stays on the table schema - i.e. the ScriptDropAll {2} (broker) vs {5} (table) split targets the right schema.
+public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
-    private class DataAnnotationTestSqlServer7Model
+    private class Model
     {
-        public long Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
     }
 
-    private const string TableName = "RatManTable";
+    private const string TableName = "BrokerSchemaRoutingModel";
 
     public override async ValueTask InitializeAsync()
     {
@@ -51,8 +50,10 @@ public class DataAnnotationTest07(DatabaseFixture databaseFixture) : SqlTableDep
         sqlCommand.CommandText = $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];";
         await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
 
-        sqlCommand.CommandText = $"CREATE TABLE [{TableName}]([Id] [int] IDENTITY(1, 1) NOT NULL, [Name] [NVARCHAR](50) NULL, [Long Description] [NVARCHAR](MAX) NULL)";
+        sqlCommand.CommandText = $"CREATE TABLE [{TableName}] ([Name] NVARCHAR(100))";
         await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+
+        await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, "dbo", TableName, TestContext.Current.CancellationToken);
     }
 
     public override async ValueTask DisposeAsync()
@@ -66,30 +67,36 @@ public class DataAnnotationTest07(DatabaseFixture databaseFixture) : SqlTableDep
     }
 
     [Fact]
-    public async Task Test()
+    public async Task BrokerObjectsLiveInBrokerSchema_TriggerLivesOnTableSchema()
     {
         // ARRANGE
-        SqlTableDependency<DataAnnotationTestSqlServer7Model>? tableDependency = null;
-        Exception? actualEx = null;
+        var ct = TestContext.Current.CancellationToken;
+        var tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
+            OwnsBrokerConnectionString, tableName: TableName, ct: ct);
+        var naming = tableDependency.NamingPrefix;
+        tableDependency.OnChanged += _ => { };
+        tableDependency.OnException += e => Assert.Fail($"OnException: {e.Message}; {e.Exception?.Message}");
 
         try
         {
             // ACT
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer7Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
-        }
-        catch (NotExistingTableException ex)
-        {
-            actualEx = ex;
+            await tableDependency.StartAsync(ct: ct);
+
+            // ASSERT - broker objects in the broker schema, trigger on the table schema
+            Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_Receiver", ct));
+            Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_Sender", ct));
+            Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_QueueActivationSender", ct));
+            Assert.Equal("dbo", await GetObjectSchemaAsync($"tr_{naming}_Sender", ct));
         }
         finally
         {
-            if (tableDependency is not null)
-                await tableDependency.DisposeAsync();
+            await tableDependency.StopAsync();
+            await tableDependency.DisposeAsync();
         }
 
-        // ASSERT
-        Assert.Null(tableDependency);
-        Assert.NotNull(actualEx);
-        Assert.Equal("I cannot find a database table named 'DataAnnotationTestSqlServer7Model'.", actualEx.Message);
+        // ASSERT - non-persistent stop drops everything across both schemas
+        await Task.Delay(TimeSpan.FromSeconds(2), ct);
+        Assert.True(await AreAllDbObjectDisposedAsync(naming, ct));
+        Assert.Equal(0, await CountConversationEndpointsAsync(naming, ct));
     }
 }

@@ -75,7 +75,7 @@ public class DataAnnotationTest08(DatabaseFixture databaseFixture) : SqlTableDep
         try
         {
             // ACT
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer8Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer8Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (NoMatchBetweenModelAndTableColumns ex)
         {

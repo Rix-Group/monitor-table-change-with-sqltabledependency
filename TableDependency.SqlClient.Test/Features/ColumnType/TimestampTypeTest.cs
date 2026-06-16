@@ -75,7 +75,7 @@ public class TimestampTypeTest(DatabaseFixture databaseFixture) : SqlTableDepend
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<TimestampTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TimestampTypeModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

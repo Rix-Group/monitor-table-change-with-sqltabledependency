@@ -93,7 +93,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
-            tableDependency = await SqlTableDependency<CultureInfoTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName1, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<CultureInfoTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName1, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed1;
             tableDependency.CultureInfo = new CultureInfo("it-IT");
@@ -139,7 +139,7 @@ public class CultureInfoTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         try
         {
-            tableDependency = await SqlTableDependency<CultureInfoTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName2, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<CultureInfoTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName2, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed2;
             tableDependency.CultureInfo = new CultureInfo("en-US");

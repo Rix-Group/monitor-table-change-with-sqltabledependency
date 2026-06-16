@@ -93,7 +93,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
             var mapper = new ModelToTableMapper<TableWithSpacesModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<TableWithSpacesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: false, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TableWithSpacesModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: false, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -139,7 +139,7 @@ public class TableWithSpacesTest(DatabaseFixture databaseFixture) : SqlTableDepe
             var mapper = new ModelToTableMapper<TableWithSpacesModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<TableWithSpacesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TableWithSpacesModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

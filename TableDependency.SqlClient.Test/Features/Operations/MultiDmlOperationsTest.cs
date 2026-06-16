@@ -105,7 +105,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
@@ -154,7 +154,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
@@ -202,7 +202,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             mapper.AddMapping(c => c.Name, "FIRST name");
             mapper.AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
@@ -240,7 +240,7 @@ public class MultiDmlOperationsTest(DatabaseFixture databaseFixture) : SqlTableD
             var mapper = new ModelToTableMapper<MultiDmlOperationsTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;

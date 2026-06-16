@@ -96,7 +96,7 @@ public class NoProblemDuringCommandTimeoutForNoMessagesTest(DatabaseFixture data
         var instance = Activator.CreateInstance(type!)!;
 
         var runTableDependencyMethod = type!.GetMethod(nameof(RunsInAnIsolatedContextNoMessage.RunTableDependency));
-        var naming = await (Task<string>)runTableDependencyMethod!.Invoke(instance, [ConnectionString, TableName])!;
+        var naming = await (Task<string>)runTableDependencyMethod!.Invoke(instance, [DependencyConnectionString, TableName])!;
 
         var getTableDependencyStatusMethod = type.GetMethod(nameof(RunsInAnIsolatedContextNoMessage.GetTableDependencyStatus));
         var status = getTableDependencyStatusMethod!.Invoke(instance, [])?.ToString();

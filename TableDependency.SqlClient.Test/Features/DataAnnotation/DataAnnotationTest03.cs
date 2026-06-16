@@ -80,7 +80,7 @@ public class DataAnnotationTest03(DatabaseFixture databaseFixture) : SqlTableDep
         try
         {
             // ACT
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer3Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer3Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (ModelToTableMapperException ex)
         {

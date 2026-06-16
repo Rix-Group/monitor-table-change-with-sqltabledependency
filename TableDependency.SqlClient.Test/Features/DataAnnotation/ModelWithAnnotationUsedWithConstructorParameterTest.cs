@@ -92,7 +92,7 @@ public class ModelWithAnnotationUsedWithConstructorParameterTest(DatabaseFixture
 
         try
         {
-            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, updateOf: updateOf, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, updateOf: updateOf, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

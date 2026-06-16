@@ -94,7 +94,7 @@ public class UseSchemaOtherThanDboTestSqlServer(DatabaseFixture databaseFixture)
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<UseSchemaOtherThanDboTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<UseSchemaOtherThanDboTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

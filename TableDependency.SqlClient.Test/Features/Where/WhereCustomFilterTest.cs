@@ -101,7 +101,7 @@ public class WhereCustomFilterTest(DatabaseFixture databaseFixture) : SqlTableDe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<CustomFilterSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);
@@ -141,7 +141,7 @@ public class WhereCustomFilterTest(DatabaseFixture databaseFixture) : SqlTableDe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<CustomFilterSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);

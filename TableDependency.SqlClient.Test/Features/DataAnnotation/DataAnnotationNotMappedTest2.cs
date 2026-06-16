@@ -90,7 +90,7 @@ public class DataAnnotationNotMappedTest2(DatabaseFixture databaseFixture) : Sql
             mapper.AddMapping(c => c.Description, "Long Description");
 
             tableDependency = await SqlTableDependency<DataAnnotationNotMappedTest2Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 schemaName: SchemaName,
                 mapper: mapper,
                 includeOldEntity: false,

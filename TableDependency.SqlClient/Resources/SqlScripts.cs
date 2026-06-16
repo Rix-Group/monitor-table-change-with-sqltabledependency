@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
@@ -152,12 +152,13 @@ END";
     public const string InsertInTableVariable = @"SET @dmlType = '{0}';
             {1}";
 
+    // {2} = broker schema (drives @schema_id, queues, activation proc); {5} = table schema (trigger lives on the table).
     public const string ScriptDropAll = @"DECLARE @conversation_handle UNIQUEIDENTIFIER;
         DECLARE @schema_id INT;
         SELECT @schema_id = schema_id FROM sys.schemas WITH (NOLOCK) WHERE name = N'{2}';
 
-        PRINT N'SqlTableDependency: Dropping trigger [{2}].[tr_{0}_Sender].';
-        IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{2}].[tr_{0}_Sender]'))
+        PRINT N'SqlTableDependency: Dropping trigger [{5}].[tr_{0}_Sender].';
+        IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{5}].[tr_{0}_Sender]'))
         BEGIN
             SELECT 1;
             {3}
@@ -198,7 +199,7 @@ END";
         PRINT N'SqlTableDependency: Dropping activation procedure {0}_QueueActivationSender.';
         IF EXISTS (SELECT * FROM sys.objects WITH (NOLOCK) WHERE schema_id = @schema_id AND name = N'{0}_QueueActivationSender') DROP PROCEDURE [{2}].[{0}_QueueActivationSender];
 
-        IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{2}].[tr_{0}_Sender]'))
+        IF EXISTS (SELECT * FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{5}].[tr_{0}_Sender]'))
         BEGIN
             SELECT 1;
             {4}

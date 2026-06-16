@@ -122,7 +122,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<WithDataAnnotationTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: false,
                 ct: TestContext.Current.CancellationToken);
@@ -172,7 +172,7 @@ public class WhereWithDataAnnotationTest(DatabaseFixture databaseFixture) : SqlT
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<WithDataAnnotationTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);

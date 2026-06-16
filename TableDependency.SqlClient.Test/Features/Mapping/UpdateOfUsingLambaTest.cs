@@ -95,7 +95,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
 
         try
         {
-            tableDependency = await SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, updateOf: updateOfModel, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, updateOf: updateOfModel, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -141,7 +141,7 @@ public class UpdateOfUsingLambaTest(DatabaseFixture databaseFixture) : SqlTableD
 
         try
         {
-            tableDependency = await SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, updateOf: updateOfModel, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<UpdateOfUsingLambaTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, updateOf: updateOfModel, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

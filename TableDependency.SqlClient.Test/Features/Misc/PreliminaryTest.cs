@@ -86,7 +86,7 @@ public class PreliminaryTest(DatabaseFixture databaseFixture) : SqlTableDependen
     public async Task InvalidTableNameTest()
     {
         await Assert.ThrowsAsync<NotExistingTableException>(
-            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: InvalidTableName, ct: TestContext.Current.CancellationToken));
+            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: InvalidTableName, ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -124,13 +124,13 @@ public class PreliminaryTest(DatabaseFixture databaseFixture) : SqlTableDependen
 
         // ACT / ASSERT
         await Assert.ThrowsAsync<ModelToTableMapperException>(
-            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken));
+            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task EmptyUpdateOfModelListTest()
     {
         await Assert.ThrowsAsync<UpdateOfException>(
-            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, updateOf: new UpdateOfModel<PreliminaryTestSqlServerModel>(), ct: TestContext.Current.CancellationToken));
+            () => SqlTableDependency<PreliminaryTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, updateOf: new UpdateOfModel<PreliminaryTestSqlServerModel>(), ct: TestContext.Current.CancellationToken));
     }
 }

@@ -96,10 +96,10 @@ public class TwoIntancesTest(DatabaseFixture databaseFixture) : SqlTableDependen
         try
         {
             // ARRANGE
-            tableDependency1 = await SqlTableDependency<TwoIntancesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName1, ct: TestContext.Current.CancellationToken);
+            tableDependency1 = await SqlTableDependency<TwoIntancesModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName1, ct: TestContext.Current.CancellationToken);
             tableDependency1.OnChanged += TableDependency_Changed1;
             naming1 = tableDependency1.NamingPrefix;
-            tableDependency2 = await SqlTableDependency<TwoIntancesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName2, ct: TestContext.Current.CancellationToken);
+            tableDependency2 = await SqlTableDependency<TwoIntancesModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName2, ct: TestContext.Current.CancellationToken);
             tableDependency2.OnChanged += TableDependency_Changed2;
             naming2 = tableDependency2.NamingPrefix;
 

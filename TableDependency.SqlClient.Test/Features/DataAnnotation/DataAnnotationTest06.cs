@@ -77,7 +77,7 @@ public class DataAnnotationTest06(DatabaseFixture databaseFixture) : SqlTableDep
         try
         {
             // ACT
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer6Model>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer6Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
         }
         catch (NotExistingTableException ex)
         {
