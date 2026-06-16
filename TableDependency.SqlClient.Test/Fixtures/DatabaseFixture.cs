@@ -38,6 +38,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     private const string BaselineLogin = "td_baseline";
     private const string NoControlLogin = "td_no_control";
     private const string SchemaControlLogin = "td_schema_control";
+    private const string ConnectOnlyLogin = "td_connect_only";
     private const string ProbePassword = "Td_Probe_Pass123!";
 
     // Logins used by tests to grant table-object permissions after the table exists.
@@ -68,6 +69,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
     // No broker-schema rights, but holds CONTROL on an unrelated schema (passes the old name-scan guard, fails the effective guard).
     public string UnrelatedControlConnectionString { get; private set; } = string.Empty;
 
+    // Only CONNECT - cannot create a schema (no CREATE SCHEMA, no db-wide ALTER/CONTROL).
+    public string ConnectOnlyConnectionString { get; private set; } = string.Empty;
+
     private MsSqlContainer? _msSqlContainer;
     public async ValueTask InitializeAsync()
     {
@@ -91,6 +95,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         SchemaControlConnectionString = await CreateProbeLoginAsync(SchemaControlLogin, BaseDatabasePermissions, extraStatements: [$"GRANT CONTROL ON SCHEMA::[dbo] TO [{SchemaControlLogin}];"], ct);
         OwnsBrokerConnectionString = await CreateProbeLoginAsync(OwnsBrokerLogin, BrokerCreatePermissions, extraStatements: [$"CREATE SCHEMA [{BrokerSchemaName}] AUTHORIZATION [{OwnsBrokerLogin}];"], ct);
         UnrelatedControlConnectionString = await CreateProbeLoginAsync(UnrelatedControlLogin, BrokerCreatePermissions, extraStatements: [$"CREATE SCHEMA [{UnrelatedSchemaName}];", $"GRANT CONTROL ON SCHEMA::[{UnrelatedSchemaName}] TO [{UnrelatedControlLogin}];"], ct);
+        ConnectOnlyConnectionString = await CreateProbeLoginAsync(ConnectOnlyLogin, ["CONNECT"], extraStatements: [], ct);
     }
 
     private async Task<string> CreateProbeLoginAsync(string login, IReadOnlyList<string> databaseGrants, IReadOnlyList<string> extraStatements, CancellationToken ct)

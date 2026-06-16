@@ -30,8 +30,10 @@ using Microsoft.Data.SqlClient;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
-// Broker objects land in the broker schema (auto-detected default, or explicit override) while the trigger
-// stays on the table schema - i.e. the ScriptDropAll {2} (broker) vs {5} (table) split targets the right schema.
+// Broker objects land in the dedicated broker schema while the trigger stays on the monitored table's schema -
+// i.e. the ScriptDropAll {2} (broker) vs {5} (table) split targets the right schema. Run under the least-privilege
+// OwnsBroker principal for both a dbo table and a non-dbo table, so the table-schema routing is exercised where it
+// differs from the broker schema and the trigger drop on {5} runs without database-wide CONTROL.
 public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
     private class Model
@@ -40,6 +42,7 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
     }
 
     private const string TableName = "BrokerSchemaRoutingModel";
+    private const string OtherSchema = "routing_schema";
 
     public override async ValueTask InitializeAsync()
     {
@@ -47,13 +50,15 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
         await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
 
         await using var sqlCommand = sqlConnection.CreateCommand();
-        sqlCommand.CommandText = $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];";
-        await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-
-        sqlCommand.CommandText = $"CREATE TABLE [{TableName}] ([Name] NVARCHAR(100))";
+        sqlCommand.CommandText = $"IF OBJECT_ID('[{OtherSchema}].[{TableName}]', 'U') IS NOT NULL DROP TABLE [{OtherSchema}].[{TableName}];"
+            + $" IF OBJECT_ID('[dbo].[{TableName}]', 'U') IS NOT NULL DROP TABLE [dbo].[{TableName}];"
+            + $" IF SCHEMA_ID('{OtherSchema}') IS NULL EXEC('CREATE SCHEMA [{OtherSchema}]');"
+            + $" CREATE TABLE [dbo].[{TableName}] ([Name] NVARCHAR(100));"
+            + $" CREATE TABLE [{OtherSchema}].[{TableName}] ([Name] NVARCHAR(100));";
         await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
 
         await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, "dbo", TableName, TestContext.Current.CancellationToken);
+        await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, OtherSchema, TableName, TestContext.Current.CancellationToken);
     }
 
     public override async ValueTask DisposeAsync()
@@ -62,17 +67,22 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
         await sqlConnection.OpenAsync(CancellationToken.None);
 
         await using var sqlCommand = sqlConnection.CreateCommand();
-        sqlCommand.CommandText = $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];";
+        sqlCommand.CommandText = $"IF OBJECT_ID('[{OtherSchema}].[{TableName}]', 'U') IS NOT NULL DROP TABLE [{OtherSchema}].[{TableName}];"
+            + $" IF OBJECT_ID('[dbo].[{TableName}]', 'U') IS NOT NULL DROP TABLE [dbo].[{TableName}];"
+            + $" IF SCHEMA_ID('{OtherSchema}') IS NOT NULL DROP SCHEMA [{OtherSchema}];";
         await sqlCommand.ExecuteNonQueryAsync(CancellationToken.None);
     }
 
-    [Fact]
-    public async Task BrokerObjectsLiveInBrokerSchema_TriggerLivesOnTableSchema()
+    // Trigger lands on the monitored table's schema (dbo or non-dbo), broker objects always on the broker schema.
+    [Theory]
+    [InlineData("dbo")]
+    [InlineData(OtherSchema)]
+    public async Task BrokerObjectsLiveInBrokerSchema_TriggerLivesOnTableSchema(string tableSchema)
     {
         // ARRANGE
         var ct = TestContext.Current.CancellationToken;
         var tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            OwnsBrokerConnectionString, tableName: TableName, ct: ct);
+            OwnsBrokerConnectionString, tableName: TableName, schemaName: tableSchema, ct: ct);
         var naming = tableDependency.NamingPrefix;
         tableDependency.OnChanged += _ => { };
         tableDependency.OnException += e => Assert.Fail($"OnException: {e.Message}; {e.Exception?.Message}");
@@ -86,7 +96,7 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
             Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_Receiver", ct));
             Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_Sender", ct));
             Assert.Equal(BrokerSchemaName, await GetObjectSchemaAsync($"{naming}_QueueActivationSender", ct));
-            Assert.Equal("dbo", await GetObjectSchemaAsync($"tr_{naming}_Sender", ct));
+            Assert.Equal(tableSchema, await GetObjectSchemaAsync($"tr_{naming}_Sender", ct));
         }
         finally
         {

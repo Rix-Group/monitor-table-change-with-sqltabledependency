@@ -73,13 +73,13 @@ public class EnsureBrokerSchemaTest(DatabaseFixture databaseFixture) : SqlTableD
     [Fact]
     public async Task ThrowsWhenPrincipalCannotCreateSchema()
     {
-        // ARRANGE - a principal with no CREATE SCHEMA right, schema absent
+        // ARRANGE - a CONNECT-only principal (no CREATE SCHEMA, no db-wide ALTER/CONTROL), schema absent
         var ct = TestContext.Current.CancellationToken;
         Assert.False(await SchemaExistsAsync("td_ensure_denied", ct));
 
         // ACT / ASSERT
         await Assert.ThrowsAsync<BrokerSchemaUnavailableException>(
-            () => NoControlConnectionString.EnsureBrokerSchemaExistsAsync("td_ensure_denied", ct));
+            () => ConnectOnlyConnectionString.EnsureBrokerSchemaExistsAsync("td_ensure_denied", ct));
         Assert.False(await SchemaExistsAsync("td_ensure_denied", ct));
     }
 

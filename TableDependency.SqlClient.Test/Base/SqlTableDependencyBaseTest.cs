@@ -48,6 +48,7 @@ public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture
     protected string SchemaControlConnectionString => _databaseFixture.SchemaControlConnectionString;
     protected string OwnsBrokerConnectionString => _databaseFixture.OwnsBrokerConnectionString;
     protected string UnrelatedControlConnectionString => _databaseFixture.UnrelatedControlConnectionString;
+    protected string ConnectOnlyConnectionString => _databaseFixture.ConnectOnlyConnectionString;
     protected static string BrokerSchemaName => DatabaseFixture.BrokerSchemaName;
     protected static string OwnsBrokerLogin => DatabaseFixture.OwnsBrokerLogin;
     protected static string UnrelatedControlLogin => DatabaseFixture.UnrelatedControlLogin;

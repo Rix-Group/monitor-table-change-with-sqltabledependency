@@ -306,7 +306,9 @@ GRANT ALTER, SELECT ON OBJECT::[dbo].[Customer] TO [app_user];   -- per monitore
 | `[SqlTableDependency]` schema | ownership via `CREATE SCHEMA ... AUTHORIZATION [app_user]` |
 | Monitored table | `ALTER` and `SELECT` on `OBJECT::[schema].[table]` (`ALTER` lets the library create the trigger and carries metadata visibility) |
 
-If the schema does not exist the library creates it on startup, which requires `CREATE SCHEMA` (held by `CONTROL`/`db_owner`); pre-creating it avoids granting that. Database-scope `GRANT ALTER`/`GRANT SELECT` are not equivalent to the object-level grants above: db-scope `ALTER` does not confer `ALTER` on a schema or table.
+If the schema does not exist the library creates it on startup, which requires `CREATE SCHEMA` (held by `db_owner`/`CONTROL`, and also by a database-scope `GRANT ALTER`); pre-creating it avoids granting any of those. Note this is about *creating* a schema — database-scope `GRANT ALTER`/`GRANT SELECT` are still not equivalent to the object-level grants above: db-scope `ALTER` does not confer `ALTER` on an existing schema or table (only ownership / `CONTROL` / object-level `ALTER` does), which is what the effective-permission guard checks.
+
+Earlier versions also asked for `EXECUTE`, `VIEW DEFINITION`, `VIEW DATABASE STATE` and `SUBSCRIBE QUERY NOTIFICATIONS`. They are no longer required: `SUBSCRIBE QUERY NOTIFICATIONS` belongs to the unrelated `SqlDependency` query-notification feature, and `EXECUTE`/`VIEW DEFINITION` on the activation procedure are implied by ownership of the `SqlTableDependency` schema (the procedure is run by Service Broker itself under its `EXECUTE AS` context, not invoked by the application).
 
 In case you specify SqlTableDependency's QueueExecuteAs property (default value is "SELF"), it can also be necessary set TRUSTWORTHY database property using:
 ```SQL
