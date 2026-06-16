@@ -35,10 +35,10 @@ namespace TableDependency.SqlClient.Test.Fixtures;
 
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private const string LeastPrivilegeLogin = "td_least_privilege";
+    private const string BaselineLogin = "td_baseline";
     private const string NoControlLogin = "td_no_control";
     private const string SchemaControlLogin = "td_schema_control";
-    private const string ProbePassword = "Least_Privilege_Pass123!";
+    private const string ProbePassword = "Td_Probe_Pass123!";
 
     // Logins used by tests to grant table-object permissions after the table exists.
     public const string OwnsBrokerLogin = "td_owns_broker";
@@ -53,8 +53,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
     // Admin connection for test scaffolding.
     public string MsSqlContainerConnectionString { get; private set; } = string.Empty;
 
-    // Least-privilege connection handed to SqlTableDependency under test (full set incl. db-wide CONTROL = baseline).
-    public string LeastPrivilegeConnectionString { get; private set; } = string.Empty;
+    // Non-admin baseline connection handed to SqlTableDependency under test: every grant plus db-wide CONTROL.
+    public string BaselineConnectionString { get; private set; } = string.Empty;
 
     // Every current grant except CONTROL, broker objects in dbo.
     public string NoControlConnectionString { get; private set; } = string.Empty;
@@ -62,7 +62,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     // ...plus GRANT CONTROL ON SCHEMA::[dbo] (no db-wide CONTROL).
     public string SchemaControlConnectionString { get; private set; } = string.Empty;
 
-    // No CONTROL anywhere; only the broker-create grants and ownership of the dedicated [tabledep] schema.
+    // No CONTROL anywhere; only the broker-create grants and ownership of the dedicated SqlTableDependency schema.
     public string OwnsBrokerConnectionString { get; private set; } = string.Empty;
 
     // No broker-schema rights, but holds CONTROL on an unrelated schema (passes the old name-scan guard, fails the effective guard).
@@ -86,7 +86,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         MsSqlContainerConnectionString = connectionString.Replace("Database=master", "Database=TableDependencyDB");
 
         var ct = TestContext.Current.CancellationToken;
-        LeastPrivilegeConnectionString = await CreateProbeLoginAsync(LeastPrivilegeLogin, [.. BaseDatabasePermissions, "CONTROL"], extraStatements: [], ct);
+        BaselineConnectionString = await CreateProbeLoginAsync(BaselineLogin, [.. BaseDatabasePermissions, "CONTROL"], extraStatements: [], ct);
         NoControlConnectionString = await CreateProbeLoginAsync(NoControlLogin, BaseDatabasePermissions, extraStatements: [], ct);
         SchemaControlConnectionString = await CreateProbeLoginAsync(SchemaControlLogin, BaseDatabasePermissions, extraStatements: [$"GRANT CONTROL ON SCHEMA::[dbo] TO [{SchemaControlLogin}];"], ct);
         OwnsBrokerConnectionString = await CreateProbeLoginAsync(OwnsBrokerLogin, BrokerCreatePermissions, extraStatements: [$"CREATE SCHEMA [{BrokerSchemaName}] AUTHORIZATION [{OwnsBrokerLogin}];"], ct);

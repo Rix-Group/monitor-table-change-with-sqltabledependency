@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
@@ -148,7 +148,8 @@ internal static class ConnectionStringExtensions
             await using var sqlCommand = sqlConnection.CreateCommand();
             sqlCommand.Parameters.AddWithValue("@schema", schemaName);
 
-            sqlCommand.CommandText = "IF SCHEMA_ID(@schema) IS NULL EXEC ('CREATE SCHEMA ' + QUOTENAME(@schema));";
+            // EXEC() only concatenates literals/variables, not function calls, so build the statement into a variable first.
+            sqlCommand.CommandText = "IF SCHEMA_ID(@schema) IS NULL BEGIN DECLARE @sql NVARCHAR(MAX) = N'CREATE SCHEMA ' + QUOTENAME(@schema); EXEC (@sql); END";
             try
             {
                 await sqlCommand.ExecuteNonQueryAsync(ct);
@@ -232,8 +233,7 @@ internal static class ConnectionStringExtensions
     private static async Task ThrowOnMissingPermissionAsync(SqlCommand sqlCommand, CancellationToken ct)
     {
         await using var reader = await sqlCommand.ExecuteReaderAsync(CommandBehavior.CloseConnection, ct);
-        if (!await reader.ReadAsync(ct))
-            throw new UserWithNoPermissionException();
+        await reader.ReadAsync(ct);
 
         for (var i = 0; i < reader.FieldCount; i++)
         {

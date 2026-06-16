@@ -63,9 +63,10 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     public const string ActivitySourceName = nameof(SqlTableDependency<>);
 
     /// <summary>
-    /// Schema the library prefers for the Service Broker objects when no broker schema is specified.
+    /// Dedicated schema holding the Service Broker objects (queues + activation procedure); the trigger stays on the monitored table's schema.
     /// Create it owned by the application principal (<c>CREATE SCHEMA [SqlTableDependency] AUTHORIZATION [app_user]</c>)
-    /// to run without database-wide CONTROL. When absent or not writable, the table schema is used.
+    /// to run without database-wide CONTROL. If it is missing, the library creates it on startup (needs CREATE SCHEMA);
+    /// when it cannot be created a <see cref="Exceptions.BrokerSchemaUnavailableException"/> is thrown.
     /// </summary>
     public const string DefaultBrokerSchemaName = "SqlTableDependency";
 

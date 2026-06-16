@@ -130,7 +130,7 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
             if (dropTrigger)
                 await DropTriggerAsync(sqlCommand, naming, schemaName);
             if (dropProcedure)
-                await DropProcedureAsync(sqlCommand, naming, schemaName);
+                await DropProcedureAsync(sqlCommand, naming);
             if (dropSenderService)
                 await DropSenderServiceAsync(sqlCommand, naming);
             if (dropReceiverService)
@@ -141,11 +141,11 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
 
             if (dropSenderQueue)
             {
-                await DeactivateSenderQueueAsync(sqlCommand, naming, schemaName);
-                await DropSenderQueueAsync(sqlCommand, naming, schemaName);
+                await DeactivateSenderQueueAsync(sqlCommand, naming);
+                await DropSenderQueueAsync(sqlCommand, naming);
             }
             if (dropReceiverQueue)
-                await DropReceiverQueueAsync(sqlCommand, naming, schemaName);
+                await DropReceiverQueueAsync(sqlCommand, naming);
             if (dropContract)
                 await DropContractAsync(sqlCommand, naming);
             if (dropMessageTypes)
@@ -193,12 +193,13 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
             return Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(TestContext.Current.CancellationToken));
         }
 
+        // Trigger lives on the table schema; the activation procedure and queues live in the broker schema.
         var trigger = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(N'[{schemaName}].[tr_{naming}_Sender]');");
-        var procedure = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_QueueActivationSender';");
+        var procedure = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.objects WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_QueueActivationSender';");
         var senderService = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.services WITH (NOLOCK) WHERE name = N'{naming}_Sender';");
         var receiverService = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.services WITH (NOLOCK) WHERE name = N'{naming}_Receiver';");
-        var senderQueue = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_Sender';");
-        var receiverQueue = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_Receiver';");
+        var senderQueue = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_Sender';");
+        var receiverQueue = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_Receiver';");
         var contract = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{naming}';");
         var messageTypes = await ExecuteCountAsync(sqlCommand, $"SELECT COUNT(*) FROM sys.service_message_types WITH (NOLOCK) WHERE name LIKE N'{naming}/%';");
 
@@ -208,8 +209,8 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
     private static Task DropTriggerAsync(SqlCommand sqlCommand, string naming, string schemaName)
         => ExecuteNonQueryAsync(sqlCommand, $"IF OBJECT_ID(N'[{schemaName}].[tr_{naming}_Sender]', 'TR') IS NOT NULL DROP TRIGGER [{schemaName}].[tr_{naming}_Sender];");
 
-    private static Task DropProcedureAsync(SqlCommand sqlCommand, string naming, string schemaName)
-        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.objects WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_QueueActivationSender') DROP PROCEDURE [{schemaName}].[{naming}_QueueActivationSender];");
+    private static Task DropProcedureAsync(SqlCommand sqlCommand, string naming)
+        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.objects WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_QueueActivationSender') DROP PROCEDURE [{BrokerSchemaName}].[{naming}_QueueActivationSender];");
 
     private static Task DropSenderServiceAsync(SqlCommand sqlCommand, string naming)
         => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{naming}_Sender') DROP SERVICE [{naming}_Sender];");
@@ -217,14 +218,14 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
     private static Task DropReceiverServiceAsync(SqlCommand sqlCommand, string naming)
         => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{naming}_Receiver') DROP SERVICE [{naming}_Receiver];");
 
-    private static Task DeactivateSenderQueueAsync(SqlCommand sqlCommand, string naming, string schemaName)
-        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_Sender') ALTER QUEUE [{schemaName}].[{naming}_Sender] WITH ACTIVATION (STATUS = OFF);");
+    private static Task DeactivateSenderQueueAsync(SqlCommand sqlCommand, string naming)
+        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_Sender') ALTER QUEUE [{BrokerSchemaName}].[{naming}_Sender] WITH ACTIVATION (STATUS = OFF);");
 
-    private static Task DropSenderQueueAsync(SqlCommand sqlCommand, string naming, string schemaName)
-        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_Sender') DROP QUEUE [{schemaName}].[{naming}_Sender];");
+    private static Task DropSenderQueueAsync(SqlCommand sqlCommand, string naming)
+        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_Sender') DROP QUEUE [{BrokerSchemaName}].[{naming}_Sender];");
 
-    private static Task DropReceiverQueueAsync(SqlCommand sqlCommand, string naming, string schemaName)
-        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{schemaName}') AND name = N'{naming}_Receiver') DROP QUEUE [{schemaName}].[{naming}_Receiver];");
+    private static Task DropReceiverQueueAsync(SqlCommand sqlCommand, string naming)
+        => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{BrokerSchemaName}') AND name = N'{naming}_Receiver') DROP QUEUE [{BrokerSchemaName}].[{naming}_Receiver];");
 
     private static Task DropContractAsync(SqlCommand sqlCommand, string naming)
         => ExecuteNonQueryAsync(sqlCommand, $"IF EXISTS (SELECT 1 FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{naming}') DROP CONTRACT [{naming}];");

@@ -32,8 +32,8 @@ using TableDependency.SqlClient.Exceptions;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
-// Permission model verification (plans/control-change.md): which grant layouts let a full listen + drop
-// lifecycle run, and that the effective-permission guard rejects principals lacking the actual broker rights.
+// Permission model verification: which grant layouts let a full listen + drop lifecycle run, and that the
+// effective-permission guard rejects principals lacking the actual broker rights.
 public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
     public enum GrantLayout

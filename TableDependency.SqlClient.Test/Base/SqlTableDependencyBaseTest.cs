@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // TableDependency, SqlTableDependency
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
@@ -40,10 +40,10 @@ public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture
     // Admin connection for test scaffolding.
     protected string ConnectionString => _databaseFixture.MsSqlContainerConnectionString;
 
-    // Least-privilege connection handed to SqlTableDependency under test (see LeastPrivilegePermissions).
-    protected string DependencyConnectionString => _databaseFixture.LeastPrivilegeConnectionString;
+    // Non-admin baseline connection handed to SqlTableDependency under test (every grant plus db-wide CONTROL).
+    protected string DependencyConnectionString => _databaseFixture.BaselineConnectionString;
 
-    // Permission probes (see plans/control-change.md).
+    // Permission probes for the effective-permission guard.
     protected string NoControlConnectionString => _databaseFixture.NoControlConnectionString;
     protected string SchemaControlConnectionString => _databaseFixture.SchemaControlConnectionString;
     protected string OwnsBrokerConnectionString => _databaseFixture.OwnsBrokerConnectionString;
