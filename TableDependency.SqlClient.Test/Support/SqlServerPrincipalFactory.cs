@@ -130,6 +130,10 @@ internal static class SqlServerPrincipalFactory
     public static string GrantSchemaControlStatement(string schemaName, string login)
         => $"GRANT CONTROL ON SCHEMA::{QuoteIdentifier(schemaName)} TO {QuoteIdentifier(login)};";
 
+    // Direct schema-level grants without ownership: ALTER+REFERENCES pass the old guard yet never confer RECEIVE.
+    public static string GrantSchemaPermissionsStatement(string schemaName, string login, params string[] permissions)
+        => string.Concat(permissions.Select(p => $"GRANT {p} ON SCHEMA::{QuoteIdentifier(schemaName)} TO {QuoteIdentifier(login)};"));
+
     public static string QuoteIdentifier(string value)
         => $"[{value.Replace("]", "]]")}]";
 

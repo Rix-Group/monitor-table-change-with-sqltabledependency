@@ -43,6 +43,7 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
         OwnsBroker,
         NoControl,
         UnrelatedControl,
+        BrokerSchemaGrantsOnly,
     }
 
     private class Model
@@ -55,12 +56,14 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
     private const string OwnsBrokerLogin = "td_owns_broker";
     private const string SchemaControlLogin = "td_schema_control";
     private const string UnrelatedControlLogin = "td_unrelated_control";
+    private const string BrokerSchemaGrantsOnlyLogin = "td_broker_grants_only";
     private const string UnrelatedSchemaName = "unrelated";
     private readonly Dictionary<ChangeType, int> _changes = Enum.GetValues<ChangeType>().ToDictionary(e => e, _ => 0);
     private string _noControlConnectionString = string.Empty;
     private string _ownsBrokerConnectionString = string.Empty;
     private string _schemaControlConnectionString = string.Empty;
     private string _unrelatedControlConnectionString = string.Empty;
+    private string _brokerSchemaGrantsOnlyConnectionString = string.Empty;
 
     public override async ValueTask InitializeAsync()
     {
@@ -93,6 +96,16 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
                 SqlServerPrincipalFactory.GrantSchemaControlStatement(UnrelatedSchemaName, UnrelatedControlLogin),
             ],
             ct);
+        _brokerSchemaGrantsOnlyConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            BrokerSchemaGrantsOnlyLogin,
+            SqlServerPrincipalFactory.BrokerCreatePermissions,
+            extraStatements:
+            [
+                SqlServerPrincipalFactory.CreateSchemaStatement(BrokerSchemaName),
+                SqlServerPrincipalFactory.GrantSchemaPermissionsStatement(BrokerSchemaName, BrokerSchemaGrantsOnlyLogin, "ALTER", "REFERENCES"),
+            ],
+            ct);
 
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(ct);
@@ -107,6 +120,7 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
         // The CONTROL-less probes get only table-object rights; everything else comes from broker-schema ownership.
         await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, OwnsBrokerLogin, "dbo", TableName, ct);
         await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, UnrelatedControlLogin, "dbo", TableName, ct);
+        await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, BrokerSchemaGrantsOnlyLogin, "dbo", TableName, ct);
     }
 
     public override async ValueTask DisposeAsync()
@@ -168,7 +182,9 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, ct));
     }
 
-    // These layouts cannot write the dedicated broker schema, even if the old name-scan guard would have passed them.
+    // These layouts cannot write/RECEIVE on the dedicated broker schema, even if an old guard would have passed them.
+    // BrokerSchemaGrantsOnly holds ALTER+REFERENCES but not CONTROL/ownership, so it lacks RECEIVE on the queues;
+    // the effective CONTROL probe rejects it up-front instead of letting it fail later at StartAsync.
     [Theory]
     [InlineData(GrantLayout.NoControl, false)]
     [InlineData(GrantLayout.NoControl, true)]
@@ -176,6 +192,8 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
     [InlineData(GrantLayout.SchemaControl, true)]
     [InlineData(GrantLayout.UnrelatedControl, false)]
     [InlineData(GrantLayout.UnrelatedControl, true)]
+    [InlineData(GrantLayout.BrokerSchemaGrantsOnly, false)]
+    [InlineData(GrantLayout.BrokerSchemaGrantsOnly, true)]
     public async Task GrantLayout_WithoutBrokerRights_RejectedByEffectiveGuard(GrantLayout layout, bool persistent)
     {
         // ARRANGE
@@ -198,6 +216,7 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
         GrantLayout.OwnsBroker => _ownsBrokerConnectionString,
         GrantLayout.NoControl => _noControlConnectionString,
         GrantLayout.UnrelatedControl => _unrelatedControlConnectionString,
+        GrantLayout.BrokerSchemaGrantsOnly => _brokerSchemaGrantsOnlyConnectionString,
         _ => throw new ArgumentOutOfRangeException(nameof(layout)),
     };
 

@@ -86,6 +86,9 @@ ORDER BY i.is_primary_key DESC, i.is_unique DESC, i.index_id, ic.key_ordinal";
     // Effective-permission guard: HAS_PERMS_BY_NAME reports the right however it is conferred
     // (direct grant, role membership, or schema/database ownership), so it is robust to the
     // ownership-based broker schema model where no CONTROL row ever appears.
+    // The broker schema is probed for effective CONTROL, not ALTER+REFERENCES: the listener does
+    // WAITFOR RECEIVE and the activation procedure RECEIVEs, and RECEIVE on those queues is only
+    // covered by CONTROL/ownership - ALTER+REFERENCES would pass the guard yet fail at StartAsync.
     // @brokerSchema = broker schema name; @table = [schema].[table] of the monitored table.
     public const string SelectEffectivePermissions = @"SELECT
     [CONNECT]             = HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CONNECT'),
@@ -94,8 +97,7 @@ ORDER BY i.is_primary_key DESC, i.is_unique DESC, i.index_id, ic.key_ordinal";
     [CREATE CONTRACT]     = HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CREATE CONTRACT'),
     [CREATE MESSAGE TYPE] = HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CREATE MESSAGE TYPE'),
     [CREATE PROCEDURE]    = HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'CREATE PROCEDURE'),
-    [ALTER ON BROKER SCHEMA]      = HAS_PERMS_BY_NAME(@brokerSchema, 'SCHEMA', 'ALTER'),
-    [REFERENCES ON BROKER SCHEMA] = HAS_PERMS_BY_NAME(@brokerSchema, 'SCHEMA', 'REFERENCES'),
+    [CONTROL ON BROKER SCHEMA]    = HAS_PERMS_BY_NAME(@brokerSchema, 'SCHEMA', 'CONTROL'),
     [ALTER ON TABLE]      = HAS_PERMS_BY_NAME(@table, 'OBJECT', 'ALTER'),
     [SELECT ON TABLE]     = HAS_PERMS_BY_NAME(@table, 'OBJECT', 'SELECT');";
 }
