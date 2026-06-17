@@ -43,29 +43,7 @@ public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture
     // Non-admin baseline connection handed to SqlTableDependency under test (every grant plus db-wide CONTROL).
     protected string DependencyConnectionString => _databaseFixture.BaselineConnectionString;
 
-    // Permission probes for the effective-permission guard.
-    protected string NoControlConnectionString => _databaseFixture.NoControlConnectionString;
-    protected string SchemaControlConnectionString => _databaseFixture.SchemaControlConnectionString;
-    protected string OwnsBrokerConnectionString => _databaseFixture.OwnsBrokerConnectionString;
-    protected string UnrelatedControlConnectionString => _databaseFixture.UnrelatedControlConnectionString;
-    protected string ConnectOnlyConnectionString => _databaseFixture.ConnectOnlyConnectionString;
-    protected static string BrokerSchemaName => DatabaseFixture.BrokerSchemaName;
-    protected static string OwnsBrokerLogin => DatabaseFixture.OwnsBrokerLogin;
-    protected static string UnrelatedControlLogin => DatabaseFixture.UnrelatedControlLogin;
-
-    // Grant object-level permissions to a login once the monitored table exists (broker-schema ownership covers the rest).
-    protected async Task GrantTableObjectPermissionsAsync(string login, string schemaName, string tableName, CancellationToken ct = default)
-    {
-        await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(ct);
-
-        await using var sqlCommand = sqlConnection.CreateCommand();
-        foreach (var permission in (string[])["ALTER", "SELECT"])
-        {
-            sqlCommand.CommandText = $"GRANT {permission} ON OBJECT::[{schemaName}].[{tableName}] TO [{login}];";
-            await sqlCommand.ExecuteNonQueryAsync(ct);
-        }
-    }
+    protected static string BrokerSchemaName => SqlTableDependency<object>.DefaultBrokerSchemaName;
 
     protected async Task<bool> AreAllDbObjectDisposedAsync(string naming, CancellationToken ct = default)
     {
@@ -95,18 +73,6 @@ public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture
         var procedureExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
         return serviceExists is 0 && senderQueueExists is 0 && receiverQueueExists is 0 && triggerExists is 0 && messageExists is 0 && procedureExists is 0 && contractExists is 0;
-    }
-
-    // Schema that owns a created object (queue/procedure/trigger), or null if it does not exist.
-    protected async Task<string?> GetObjectSchemaAsync(string objectName, CancellationToken ct = default)
-    {
-        await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(ct);
-
-        await using var sqlCommand = sqlConnection.CreateCommand();
-        sqlCommand.CommandText = "SELECT SCHEMA_NAME(schema_id) FROM sys.objects WITH (NOLOCK) WHERE name = @name";
-        sqlCommand.Parameters.AddWithValue("@name", objectName);
-        return await sqlCommand.ExecuteScalarAsync(ct) as string;
     }
 
     protected async Task<int> CountConversationEndpointsAsync(string? naming = null, CancellationToken ct = default)

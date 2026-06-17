@@ -29,13 +29,26 @@
 using Microsoft.Data.SqlClient;
 using TableDependency.SqlClient.Exceptions;
 using TableDependency.SqlClient.Extensions;
+using TableDependency.SqlClient.Test.Support;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
-// EnsureBrokerSchemaExistsAsync creates the schema when missing, is idempotent, and surfaces a clear error
-// when the principal cannot create it.
+// EnsureBrokerSchemaExistsAsync handles create, idempotency, and permission-denied paths.
 public class EnsureBrokerSchemaTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
+    private const string ConnectOnlyLogin = "td_connect_only";
+    private string _connectOnlyConnectionString = string.Empty;
+
+    public override async ValueTask InitializeAsync()
+    {
+        _connectOnlyConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            ConnectOnlyLogin,
+            ["CONNECT"],
+            extraStatements: [],
+            TestContext.Current.CancellationToken);
+    }
+
     public override async ValueTask DisposeAsync()
     {
         await DropSchemaAsync("td_ensure_create");
@@ -79,7 +92,7 @@ public class EnsureBrokerSchemaTest(DatabaseFixture databaseFixture) : SqlTableD
 
         // ACT / ASSERT
         await Assert.ThrowsAsync<BrokerSchemaUnavailableException>(
-            () => ConnectOnlyConnectionString.EnsureBrokerSchemaExistsAsync("td_ensure_denied", ct));
+            () => _connectOnlyConnectionString.EnsureBrokerSchemaExistsAsync("td_ensure_denied", ct));
         Assert.False(await SchemaExistsAsync("td_ensure_denied", ct));
     }
 

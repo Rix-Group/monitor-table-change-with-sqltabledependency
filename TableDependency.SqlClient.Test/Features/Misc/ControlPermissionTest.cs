@@ -29,11 +29,11 @@
 using Microsoft.Data.SqlClient;
 using TableDependency.SqlClient.Base.Enums;
 using TableDependency.SqlClient.Exceptions;
+using TableDependency.SqlClient.Test.Support;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
-// Permission model verification: which grant layouts let a full listen + drop lifecycle run, and that the
-// effective-permission guard rejects principals lacking the actual broker rights.
+// Permission model verification for successful and rejected grant layouts.
 public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
     public enum GrantLayout
@@ -51,23 +51,62 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
     }
 
     private const string TableName = "ControlPermissionModel";
+    private const string NoControlLogin = "td_no_control";
+    private const string OwnsBrokerLogin = "td_owns_broker";
+    private const string SchemaControlLogin = "td_schema_control";
+    private const string UnrelatedControlLogin = "td_unrelated_control";
+    private const string UnrelatedSchemaName = "unrelated";
     private readonly Dictionary<ChangeType, int> _changes = Enum.GetValues<ChangeType>().ToDictionary(e => e, _ => 0);
+    private string _noControlConnectionString = string.Empty;
+    private string _ownsBrokerConnectionString = string.Empty;
+    private string _schemaControlConnectionString = string.Empty;
+    private string _unrelatedControlConnectionString = string.Empty;
 
     public override async ValueTask InitializeAsync()
     {
+        var ct = TestContext.Current.CancellationToken;
+        _noControlConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            NoControlLogin,
+            SqlServerPrincipalFactory.LegacyDatabasePermissions,
+            extraStatements: [],
+            ct);
+        _schemaControlConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            SchemaControlLogin,
+            SqlServerPrincipalFactory.LegacyDatabasePermissions,
+            extraStatements: [SqlServerPrincipalFactory.GrantSchemaControlStatement("dbo", SchemaControlLogin)],
+            ct);
+        _ownsBrokerConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            OwnsBrokerLogin,
+            SqlServerPrincipalFactory.BrokerCreatePermissions,
+            extraStatements: [SqlServerPrincipalFactory.CreateSchemaStatement(BrokerSchemaName, OwnsBrokerLogin)],
+            ct);
+        _unrelatedControlConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            UnrelatedControlLogin,
+            SqlServerPrincipalFactory.BrokerCreatePermissions,
+            extraStatements:
+            [
+                SqlServerPrincipalFactory.CreateSchemaStatement(UnrelatedSchemaName),
+                SqlServerPrincipalFactory.GrantSchemaControlStatement(UnrelatedSchemaName, UnrelatedControlLogin),
+            ],
+            ct);
+
         await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
+        await sqlConnection.OpenAsync(ct);
 
         await using var sqlCommand = sqlConnection.CreateCommand();
         sqlCommand.CommandText = $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];";
-        await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        await sqlCommand.ExecuteNonQueryAsync(ct);
 
         sqlCommand.CommandText = $"CREATE TABLE [{TableName}] ([Name] NVARCHAR(100))";
-        await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        await sqlCommand.ExecuteNonQueryAsync(ct);
 
         // The CONTROL-less probes get only table-object rights; everything else comes from broker-schema ownership.
-        await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, "dbo", TableName, TestContext.Current.CancellationToken);
-        await GrantTableObjectPermissionsAsync(UnrelatedControlLogin, "dbo", TableName, TestContext.Current.CancellationToken);
+        await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, OwnsBrokerLogin, "dbo", TableName, ct);
+        await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, UnrelatedControlLogin, "dbo", TableName, ct);
     }
 
     public override async ValueTask DisposeAsync()
@@ -129,9 +168,7 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, ct));
     }
 
-    // None of these can write the dedicated broker schema (NoControl: db-wide ALTER only; SchemaControl: CONTROL on dbo
-    // only; UnrelatedControl: CONTROL on an unrelated schema), so all are rejected naming it - UnrelatedControl would
-    // have passed the old name-scan guard.
+    // These layouts cannot write the dedicated broker schema, even if the old name-scan guard would have passed them.
     [Theory]
     [InlineData(GrantLayout.NoControl, false)]
     [InlineData(GrantLayout.NoControl, true)]
@@ -157,10 +194,10 @@ public class ControlPermissionTest(DatabaseFixture databaseFixture) : SqlTableDe
     private string ConnectionStringFor(GrantLayout layout) => layout switch
     {
         GrantLayout.DatabaseControl => DependencyConnectionString,
-        GrantLayout.SchemaControl => SchemaControlConnectionString,
-        GrantLayout.OwnsBroker => OwnsBrokerConnectionString,
-        GrantLayout.NoControl => NoControlConnectionString,
-        GrantLayout.UnrelatedControl => UnrelatedControlConnectionString,
+        GrantLayout.SchemaControl => _schemaControlConnectionString,
+        GrantLayout.OwnsBroker => _ownsBrokerConnectionString,
+        GrantLayout.NoControl => _noControlConnectionString,
+        GrantLayout.UnrelatedControl => _unrelatedControlConnectionString,
         _ => throw new ArgumentOutOfRangeException(nameof(layout)),
     };
 

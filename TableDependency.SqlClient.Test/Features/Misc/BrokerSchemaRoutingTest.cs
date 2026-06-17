@@ -27,13 +27,11 @@
 #endregion
 
 using Microsoft.Data.SqlClient;
+using TableDependency.SqlClient.Test.Support;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
-// Broker objects land in the dedicated broker schema while the trigger stays on the monitored table's schema -
-// i.e. the ScriptDropAll {2} (broker) vs {5} (table) split targets the right schema. Run under the least-privilege
-// OwnsBroker principal for both a dbo table and a non-dbo table, so the table-schema routing is exercised where it
-// differs from the broker schema and the trigger drop on {5} runs without database-wide CONTROL.
+// Broker objects land in the dedicated broker schema while the trigger stays on the monitored table's schema.
 public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
     private class Model
@@ -43,11 +41,21 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
 
     private const string TableName = "BrokerSchemaRoutingModel";
     private const string OtherSchema = "routing_schema";
+    private const string OwnsBrokerLogin = "td_owns_broker";
+    private string _ownsBrokerConnectionString = string.Empty;
 
     public override async ValueTask InitializeAsync()
     {
+        var ct = TestContext.Current.CancellationToken;
+        _ownsBrokerConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            ConnectionString,
+            OwnsBrokerLogin,
+            SqlServerPrincipalFactory.BrokerCreatePermissions,
+            extraStatements: [SqlServerPrincipalFactory.CreateSchemaStatement(BrokerSchemaName, OwnsBrokerLogin)],
+            ct);
+
         await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
+        await sqlConnection.OpenAsync(ct);
 
         await using var sqlCommand = sqlConnection.CreateCommand();
         sqlCommand.CommandText = $"IF OBJECT_ID('[{OtherSchema}].[{TableName}]', 'U') IS NOT NULL DROP TABLE [{OtherSchema}].[{TableName}];"
@@ -55,10 +63,10 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
             + $" IF SCHEMA_ID('{OtherSchema}') IS NULL EXEC('CREATE SCHEMA [{OtherSchema}]');"
             + $" CREATE TABLE [dbo].[{TableName}] ([Name] NVARCHAR(100));"
             + $" CREATE TABLE [{OtherSchema}].[{TableName}] ([Name] NVARCHAR(100));";
-        await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        await sqlCommand.ExecuteNonQueryAsync(ct);
 
-        await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, "dbo", TableName, TestContext.Current.CancellationToken);
-        await GrantTableObjectPermissionsAsync(OwnsBrokerLogin, OtherSchema, TableName, TestContext.Current.CancellationToken);
+        await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, OwnsBrokerLogin, "dbo", TableName, ct);
+        await SqlServerPrincipalFactory.GrantTableObjectPermissionsAsync(ConnectionString, OwnsBrokerLogin, OtherSchema, TableName, ct);
     }
 
     public override async ValueTask DisposeAsync()
@@ -82,7 +90,7 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
         // ARRANGE
         var ct = TestContext.Current.CancellationToken;
         var tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            OwnsBrokerConnectionString, tableName: TableName, schemaName: tableSchema, ct: ct);
+            _ownsBrokerConnectionString, tableName: TableName, schemaName: tableSchema, ct: ct);
         var naming = tableDependency.NamingPrefix;
         tableDependency.OnChanged += _ => { };
         tableDependency.OnException += e => Assert.Fail($"OnException: {e.Message}; {e.Exception?.Message}");
@@ -108,5 +116,17 @@ public class BrokerSchemaRoutingTest(DatabaseFixture databaseFixture) : SqlTable
         await Task.Delay(TimeSpan.FromSeconds(2), ct);
         Assert.True(await AreAllDbObjectDisposedAsync(naming, ct));
         Assert.Equal(0, await CountConversationEndpointsAsync(naming, ct));
+    }
+
+    // Schema that owns a created object (queue/procedure/trigger), or null if it does not exist.
+    private async Task<string?> GetObjectSchemaAsync(string objectName, CancellationToken ct)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
+
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = "SELECT SCHEMA_NAME(schema_id) FROM sys.objects WITH (NOLOCK) WHERE name = @name";
+        sqlCommand.Parameters.AddWithValue("@name", objectName);
+        return await sqlCommand.ExecuteScalarAsync(ct) as string;
     }
 }
