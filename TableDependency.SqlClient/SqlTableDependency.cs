@@ -1114,8 +1114,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             }
             else
             {
-                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToError);
+                // Surface the exception before the terminal status so a subscriber observing StopDueToError already has it.
                 await NotifyListenersAboutException(exception);
+                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToError);
                 LogError(exception, "Exception in WaitForNotifications.");
             }
         }
