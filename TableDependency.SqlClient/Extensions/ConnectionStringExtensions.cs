@@ -157,8 +157,8 @@ internal static class ConnectionStringExtensions
             catch (SqlException exception)
             {
                 // Lost a creation race with another listener, or no CREATE SCHEMA right: succeed if it now exists.
-                sqlCommand.CommandText = "SELECT CASE WHEN SCHEMA_ID(@schema) IS NULL THEN 0 ELSE 1 END;";
-                if (await sqlCommand.ExecuteScalarAsync(ct) is 1)
+                // Re-check on a fresh connection: the original fault may have broken sqlConnection.
+                if (await SchemaExistsAsync(connectionString, schemaName, ct))
                     return;
 
                 throw new BrokerSchemaUnavailableException(schemaName, exception);
@@ -239,6 +239,26 @@ internal static class ConnectionStringExtensions
         {
             if (reader.IsDBNull(i) || reader.GetInt32(i) is not 1)
                 throw new UserWithMissingPermissionException(reader.GetName(i));
+        }
+    }
+
+    // Fresh-connection existence probe; a broken connection during creation surfaces as "missing" so the caller reports it cleanly.
+    private static async Task<bool> SchemaExistsAsync(string connectionString, string schemaName, CancellationToken ct)
+    {
+        try
+        {
+            await using var sqlConnection = new SqlConnection(connectionString);
+            await sqlConnection.OpenAsync(ct);
+
+            await using var sqlCommand = sqlConnection.CreateCommand();
+            sqlCommand.CommandText = "SELECT CASE WHEN SCHEMA_ID(@schema) IS NULL THEN 0 ELSE 1 END;";
+            sqlCommand.Parameters.AddWithValue("@schema", schemaName);
+
+            return await sqlCommand.ExecuteScalarAsync(ct) is 1;
+        }
+        catch (SqlException)
+        {
+            return false;
         }
     }
 }
