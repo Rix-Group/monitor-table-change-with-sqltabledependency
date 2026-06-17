@@ -319,8 +319,12 @@ public class DatabaseObjectCleanUpTest(DatabaseFixture databaseFixture) : SqlTab
             await Task.Delay(TimeSpan.FromSeconds(watchdogTimeoutSeconds + 5), TestContext.Current.CancellationToken);
 
             // ASSERT
-            // Even if the background thread is still inserting data in table, db objects must be removed
-            Assert.True(await AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken));
+            // Even if the background thread is still inserting data in table, db objects must be removed by the watchdog-driven activation procedure.
+            // Poll past the watchdog deadline so activation latency does not race the assertion; report any survivor (with schema) on failure.
+            var disposed = await PollUntilAsync(() => AreAllDbObjectDisposedAsync(naming, TestContext.Current.CancellationToken), TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+            if (!disposed)
+                Assert.Fail($"DB objects not cleaned up after watchdog. Survivors: {string.Join(", ", await GetSurvivingDbObjectsAsync(naming, TestContext.Current.CancellationToken))}");
+
             Assert.Equal(0, await CountConversationEndpointsAsync(naming, TestContext.Current.CancellationToken));
         }
         finally
