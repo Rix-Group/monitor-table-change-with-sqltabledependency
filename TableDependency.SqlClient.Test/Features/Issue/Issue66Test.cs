@@ -113,7 +113,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue66Model1>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName + "1", includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue66Model1>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName + "1", includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -166,7 +166,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
-            tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName + "2", mapper: mapper, updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName + "2", mapper: mapper, updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed2;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -217,7 +217,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
-            tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName + "2", mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName + "2", mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed2;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -269,7 +269,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
 
         try
         {
-            tableDependency = await SqlTableDependency<Issue66Model1>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName + "1", updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue66Model1>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName + "1", updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -325,7 +325,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName + "2",
                 mapper: mapper,
                 updateOf: updateOf,
@@ -390,7 +390,7 @@ public class Issue66Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             tableDependency = await SqlTableDependency<Issue66Model2>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName + "2",
                 mapper: mapper,
                 updateOf: updateOf,

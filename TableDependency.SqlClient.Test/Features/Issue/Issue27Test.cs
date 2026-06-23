@@ -72,7 +72,7 @@ public class Issue27Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue27Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue27Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
 
             tableDependency.OnChanged += _ => { };
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

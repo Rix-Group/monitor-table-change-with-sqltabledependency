@@ -79,7 +79,7 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
@@ -109,7 +109,7 @@ public class MultiDmlOperationsOrderTest(DatabaseFixture databaseFixture) : SqlT
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MultiDmlOperationsOrderTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

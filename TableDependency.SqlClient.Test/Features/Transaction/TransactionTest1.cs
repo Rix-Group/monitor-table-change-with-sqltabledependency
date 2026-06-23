@@ -85,7 +85,7 @@ public class TransactionTest1(DatabaseFixture databaseFixture) : SqlTableDepende
             var mapper = new ModelToTableMapper<TransactionTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "FIRST name").AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<TransactionTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TransactionTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += _ => _counter++;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

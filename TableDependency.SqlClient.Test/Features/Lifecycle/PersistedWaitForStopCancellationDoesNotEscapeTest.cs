@@ -76,7 +76,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         Exception? raisedException = null;
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -118,7 +118,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         Exception? raisedException = null;
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -172,7 +172,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         Exception? raisedException = null;
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -218,7 +218,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         var subscriberFailure = new InvalidOperationException("subscriber blew up");
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -263,7 +263,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         var faulted = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -316,7 +316,7 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
         Exception? raisedException = null;
 
         var dependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-            ConnectionString,
+            DependencyConnectionString,
             tableName: TableName,
             persistentId: persistentId,
             ct: TestContext.Current.CancellationToken);
@@ -369,9 +369,9 @@ public sealed class PersistedWaitForStopCancellationDoesNotEscapeTest(DatabaseFi
 
     private async Task KillSqlTableDependencyDbConnection(CancellationToken ct)
     {
-        var sqlConnectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
-        var initialCatalog = sqlConnectionStringBuilder.InitialCatalog;
-        var userId = sqlConnectionStringBuilder.UserID;
+        var initialCatalog = new SqlConnectionStringBuilder(ConnectionString).InitialCatalog;
+        // Kill the dependency's login (least-privilege), not the admin login the kill runs under.
+        var userId = new SqlConnectionStringBuilder(DependencyConnectionString).UserID;
 
         await using var sqlConnection = new SqlConnection(ConnectionString);
         await sqlConnection.OpenAsync(ct);

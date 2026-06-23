@@ -98,7 +98,7 @@ public class ComputedColumnTest(DatabaseFixture databaseFixture) : SqlTableDepen
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<ComputedColumnModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<ComputedColumnModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
@@ -146,7 +146,7 @@ public class ComputedColumnTest(DatabaseFixture databaseFixture) : SqlTableDepen
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<ComputedColumnModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<ComputedColumnModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);

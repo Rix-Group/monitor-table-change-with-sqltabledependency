@@ -79,7 +79,7 @@ public class NoTableAndColumnDefinitionsTestSqlServerTest(DatabaseFixture databa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<NoTableAndColumnDefinitionsTestSqlServerTestModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<NoTableAndColumnDefinitionsTestSqlServerTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

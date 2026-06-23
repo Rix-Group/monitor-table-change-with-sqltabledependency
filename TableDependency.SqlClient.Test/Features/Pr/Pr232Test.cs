@@ -74,7 +74,7 @@ public class Pr232(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(ConnectionString, persistentId: "persistent", ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, persistentId: "persistent", ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
             tableDependency.OnChanged += OnChanged;
             tableDependency.OnException += e => Assert.Fail($"EventArg Message: {e.Message}; Exception Message: {e.Exception?.Message}; Exception Stack Trace: {e.Exception?.StackTrace}");

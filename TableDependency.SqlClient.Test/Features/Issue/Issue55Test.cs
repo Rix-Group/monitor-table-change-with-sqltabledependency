@@ -92,7 +92,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             tableDependency = await SqlTableDependency<Issue55Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 includeOldEntity: false, ct: TestContext.Current.CancellationToken);
@@ -147,7 +147,7 @@ public class Issue55Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             tableDependency = await SqlTableDependency<Issue55Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 includeOldEntity: true, ct: TestContext.Current.CancellationToken);

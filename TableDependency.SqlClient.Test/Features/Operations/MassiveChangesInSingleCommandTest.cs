@@ -84,7 +84,7 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -128,7 +128,7 @@ public class MassiveChangesInSingleCommandTest(DatabaseFixture databaseFixture) 
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<MassiveChangesInSingleCommandModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

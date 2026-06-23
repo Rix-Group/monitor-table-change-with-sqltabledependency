@@ -79,7 +79,7 @@ public class CancellationTokenTest(DatabaseFixture databaseFixture) : SqlTableDe
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var token = cts.Token;
 
-        await using var listenerSlq = await ListenerSlq.CreateListenerSlqAsync(ConnectionString);
+        await using var listenerSlq = await ListenerSlq.CreateListenerSlqAsync(DependencyConnectionString);
         var objectNaming = listenerSlq.ObjectNaming;
 
         var t = ListenerSlq.RunAsync(token);

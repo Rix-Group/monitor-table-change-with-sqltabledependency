@@ -83,7 +83,7 @@ public class TaskCancellationTest(DatabaseFixture databaseFixture) : SqlTableDep
             var mapper = new ModelToTableMapper<TaskCancellationTestSqlServerModel>();
             mapper.AddMapping(c => c.Name, "First Name").AddMapping(c => c.Surname, "Second Name");
 
-            tableDependency = await SqlTableDependency<TaskCancellationTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TaskCancellationTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += _ => { };
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

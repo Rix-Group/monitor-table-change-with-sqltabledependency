@@ -85,7 +85,7 @@ public class WhereMultipleConditionsTest(DatabaseFixture databaseFixture) : SqlT
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<ProdottiSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, mapper: mapper, filter: whereCondition, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<ProdottiSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, mapper: mapper, filter: whereCondition, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

@@ -100,7 +100,7 @@ public class EventForSpecificColumnsTest(DatabaseFixture databaseFixture) : SqlT
             updateOf.Add(i => i.Surname);
 
             tableDependency = await SqlTableDependency<EventForSpecificColumnsTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 updateOf: updateOf,
@@ -151,7 +151,7 @@ public class EventForSpecificColumnsTest(DatabaseFixture databaseFixture) : SqlT
             updateOf.Add(i => i.Surname);
 
             tableDependency = await SqlTableDependency<EventForSpecificColumnsTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 updateOf: updateOf,

@@ -82,7 +82,7 @@ public class StopAndStartTest(DatabaseFixture databaseFixture) : SqlTableDepende
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<StopAndStartTestModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<StopAndStartTestModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming1 = tableDependency.NamingPrefix;

@@ -99,7 +99,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
             var updateOf = new UpdateOfModel<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>();
             updateOf.Add(model => model.FamilyName);
 
-            tableDependency = await SqlTableDependency<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, updateOf: updateOf, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, updateOf: updateOf, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -141,7 +141,7 @@ public class TableNameFromModelClassNameAndUpdateOfTest(DatabaseFixture database
             var updateOf = new UpdateOfModel<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>();
             updateOf.Add(model => model.FamilyName);
 
-            tableDependency = await SqlTableDependency<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TableNameFromModelClassNameAndUpdateOfTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, updateOf: updateOf, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

@@ -110,7 +110,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<FilterUsingSchemaTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 schemaName: SchemaName,
                 filter: filterExpression,
@@ -159,7 +159,7 @@ public class FilterUsingSchemaTest(DatabaseFixture databaseFixture) : SqlTableDe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<FilterUsingSchemaTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 schemaName: SchemaName,
                 filter: filterExpression,

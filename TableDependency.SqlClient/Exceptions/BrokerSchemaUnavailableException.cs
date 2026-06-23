@@ -27,36 +27,9 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
+using TableDependency.SqlClient.Base.Exceptions;
 
-namespace TableDependency.SqlClient.Utilities;
+namespace TableDependency.SqlClient.Exceptions;
 
-internal class Privilege
-{
-    public string UserName { get; set; } = string.Empty;
-    public string UserType { get; set; } = string.Empty;
-    public string DatabaseUserName { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public string PermissionType { get; set; } = string.Empty;
-    public string PermissionState { get; set; } = string.Empty;
-    public string ObjectType { get; set; } = string.Empty;
-    public string ObjectName { get; set; } = string.Empty;
-    public string ColumnName { get; set; } = string.Empty;
-
-    public static Privilege FromColumns(Dictionary<string, object> columns)
-    {
-        var privilege = new Privilege();
-
-        foreach (var column in columns)
-        {
-            var propertyInfo = typeof(Privilege).GetProperty(column.Key);
-            if (propertyInfo is null)
-                continue;
-
-            var theValue = column.Value == DBNull.Value ? null : column.Value;
-            propertyInfo.SetValue(privilege, theValue);
-        }
-
-        return privilege;
-    }
-}
+public sealed class BrokerSchemaUnavailableException(string schemaName, Exception innerException)
+    : TableDependencyException($"Broker schema '{schemaName}' does not exist and could not be created. Pre-create it owned by the application principal, or grant CREATE SCHEMA.", innerException);

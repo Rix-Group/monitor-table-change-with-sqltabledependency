@@ -78,7 +78,7 @@ public class ExpandoObjectTest(DatabaseFixture databaseFixture) : SqlTableDepend
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<ExpandoObject>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);

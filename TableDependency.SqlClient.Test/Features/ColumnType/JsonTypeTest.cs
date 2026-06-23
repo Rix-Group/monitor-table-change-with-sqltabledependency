@@ -79,7 +79,7 @@ public class JsonTypeTest(DatabaseFixture databaseFixture) : SqlTableDependencyB
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<JsonTypeModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<JsonTypeModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

@@ -30,7 +30,6 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TableDependency.SqlClient.Base.Exceptions;
@@ -38,7 +37,6 @@ using TableDependency.SqlClient.Base.Utilities;
 using TableDependency.SqlClient.Enums;
 using TableDependency.SqlClient.Exceptions;
 using TableDependency.SqlClient.Resources;
-using TableDependency.SqlClient.Utilities;
 
 namespace TableDependency.SqlClient.Extensions;
 
@@ -127,30 +125,43 @@ internal static class ConnectionStringExtensions
             }
         }
 
-        public async Task CheckUserHasPermissionsAsync(CancellationToken ct)
+        public async Task CheckUserHasPermissionsAsync(string schemaName, string tableName, string brokerSchemaName, CancellationToken ct)
         {
-            PrivilegesTable privilegesTable;
-
             await using var sqlConnection = new SqlConnection(connectionString);
             await sqlConnection.OpenAsync(ct);
 
             await using var sqlCommand = sqlConnection.CreateCommand();
-            sqlCommand.CommandText = SqlScripts.SelectUserGrants;
+            sqlCommand.CommandText = SqlScripts.SelectEffectivePermissions;
+            sqlCommand.Parameters.AddWithValue("@brokerSchema", brokerSchemaName);
+            sqlCommand.Parameters.AddWithValue("@table", $"[{schemaName}].[{tableName}]");
 
-            await using var reader = await sqlCommand.ExecuteReaderAsync(CommandBehavior.CloseConnection, ct);
-            privilegesTable = new(reader);
+            await ThrowOnMissingPermissionAsync(sqlCommand, ct);
+        }
 
-            if (privilegesTable.Rows.Length is 0)
-                throw new UserWithNoPermissionException();
+        // Ensure the broker schema exists, creating it (owned by the connecting principal) when missing.
+        // Creation needs CREATE SCHEMA / CONTROL; without it a clear exception tells the operator to pre-create the schema.
+        public async Task EnsureBrokerSchemaExistsAsync(string schemaName, CancellationToken ct)
+        {
+            await using var sqlConnection = new SqlConnection(connectionString);
+            await sqlConnection.OpenAsync(ct);
 
-            if (privilegesTable.Rows.Any(r => r.Role?.Equals("db_owner", StringComparison.OrdinalIgnoreCase) is true))
-                return;
+            await using var sqlCommand = sqlConnection.CreateCommand();
+            sqlCommand.Parameters.AddWithValue("@schema", schemaName);
 
-            foreach (var permission in Enum.GetValues<SqlServerRequiredPermission>())
+            // EXEC() only concatenates literals/variables, not function calls, so build the statement into a variable first.
+            sqlCommand.CommandText = "IF SCHEMA_ID(@schema) IS NULL BEGIN DECLARE @sql NVARCHAR(MAX) = N'CREATE SCHEMA ' + QUOTENAME(@schema); EXEC (@sql); END";
+            try
             {
-                var permissionToCheck = permission.GetDescriptionFromEnumValue();
-                if (privilegesTable.Rows.All(r => !r.PermissionType.Equals(permissionToCheck, StringComparison.OrdinalIgnoreCase)))
-                    throw new UserWithMissingPermissionException(permissionToCheck);
+                await sqlCommand.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqlException exception)
+            {
+                // Lost a creation race with another listener, or no CREATE SCHEMA right: succeed if it now exists.
+                // Re-check on a fresh connection: the original fault may have broken sqlConnection.
+                if (await SchemaExistsAsync(connectionString, schemaName, ct))
+                    return;
+
+                throw new BrokerSchemaUnavailableException(schemaName, exception);
             }
         }
 
@@ -214,6 +225,40 @@ internal static class ConnectionStringExtensions
             var sqlCommand = sqlConnection.CreateCommand();
             sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE name LIKE N'{prefix}%';";
             return await sqlCommand.ExecuteScalarAsync(ct) is > 0;
+        }
+    }
+
+    // Each column is a HAS_PERMS_BY_NAME probe: 1 = held (by grant, role, or ownership), 0 = not held,
+    // NULL = securable does not exist; anything other than 1 is reported as the missing permission.
+    private static async Task ThrowOnMissingPermissionAsync(SqlCommand sqlCommand, CancellationToken ct)
+    {
+        await using var reader = await sqlCommand.ExecuteReaderAsync(CommandBehavior.CloseConnection, ct);
+        await reader.ReadAsync(ct);
+
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            if (reader.IsDBNull(i) || reader.GetInt32(i) is not 1)
+                throw new UserWithMissingPermissionException(reader.GetName(i));
+        }
+    }
+
+    // Fresh-connection existence probe; a broken connection during creation surfaces as "missing" so the caller reports it cleanly.
+    private static async Task<bool> SchemaExistsAsync(string connectionString, string schemaName, CancellationToken ct)
+    {
+        try
+        {
+            await using var sqlConnection = new SqlConnection(connectionString);
+            await sqlConnection.OpenAsync(ct);
+
+            await using var sqlCommand = sqlConnection.CreateCommand();
+            sqlCommand.CommandText = "SELECT CASE WHEN SCHEMA_ID(@schema) IS NULL THEN 0 ELSE 1 END;";
+            sqlCommand.Parameters.AddWithValue("@schema", schemaName);
+
+            return await sqlCommand.ExecuteScalarAsync(ct) is 1;
+        }
+        catch (SqlException)
+        {
+            return false;
         }
     }
 }

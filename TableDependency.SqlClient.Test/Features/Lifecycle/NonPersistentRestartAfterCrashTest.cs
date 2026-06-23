@@ -92,7 +92,7 @@ public class NonPersistentRestartAfterCrashTest(DatabaseFixture databaseFixture)
                 .AddMapping(c => c.Surname, "Second Name");
 
             tableDependency = await SqlTableDependency<NonPersistentRestartAfterCrashTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 ct: TestContext.Current.CancellationToken);
@@ -168,7 +168,7 @@ public class NonPersistentRestartAfterCrashTest(DatabaseFixture databaseFixture)
 
         startInfo.ArgumentList.Add(crashSimPath);
         startInfo.ArgumentList.Add("--connectionString");
-        startInfo.ArgumentList.Add(ConnectionString);
+        startInfo.ArgumentList.Add(DependencyConnectionString);
         startInfo.ArgumentList.Add("--tableName");
         startInfo.ArgumentList.Add(TableName);
         startInfo.ArgumentList.Add("--timeout");

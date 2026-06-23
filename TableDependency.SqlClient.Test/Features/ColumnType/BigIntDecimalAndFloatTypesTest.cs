@@ -94,7 +94,7 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -138,7 +138,7 @@ public class BigIntDecimalAndFloatTypesTest(DatabaseFixture databaseFixture) : S
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<BigIntDecimalAndFloatTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

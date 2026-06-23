@@ -286,20 +286,29 @@ To use notifications, you must be sure to enable Service Broker for the database
 ```SQL
 ALTER DATABASE MyDatabase SET ENABLE_BROKER
 ```
-In case the user specified in the connection string is not database **Administrator**, **db owner** or neither has **db_owner** role, please make sure to GRANT the following permissions to your login user:
-* ALTER
-* CONNECT
-* CONTROL
-* CREATE CONTRACT
-* CREATE MESSAGE TYPE
-* CREATE PROCEDURE
-* CREATE QUEUE
-* CREATE SERVICE
-* EXECUTE
-* SELECT
-* SUBSCRIBE QUERY NOTIFICATIONS
-* VIEW DATABASE STATE
-* VIEW DEFINITION
+### Permissions
+
+A database **Administrator**, **db owner**, or member of the **db_owner** role needs no further grants. Otherwise the permission guard checks the **effective** rights via `HAS_PERMS_BY_NAME`, so a right counts whether it comes from a direct grant, a role, or schema ownership.
+
+The Service Broker objects (two queues and the activation procedure) need object-level `REFERENCES`/`ALTER`/`RECEIVE` (e.g. `CREATE SERVICE ... ON QUEUE` needs `REFERENCES` on the queue). The owner of a schema holds those rights on every object in it without any `CONTROL` grant, so the library puts the broker objects in a dedicated `SqlTableDependency` schema (only the trigger stays on the monitored table's schema). No application code change is needed.
+
+For least privilege, pre-create that schema owned by the application principal and grant the narrow set below:
+
+```SQL
+CREATE SCHEMA [SqlTableDependency] AUTHORIZATION [app_user];
+GRANT CONNECT, CREATE QUEUE, CREATE SERVICE, CREATE CONTRACT, CREATE MESSAGE TYPE, CREATE PROCEDURE TO [app_user];
+GRANT ALTER, SELECT ON OBJECT::[dbo].[Customer] TO [app_user];   -- per monitored table
+```
+
+| Securable | Permission |
+|---|---|
+| Database | `CONNECT`, `CREATE QUEUE`, `CREATE SERVICE`, `CREATE CONTRACT`, `CREATE MESSAGE TYPE`, `CREATE PROCEDURE` |
+| `[SqlTableDependency]` schema | ownership via `CREATE SCHEMA ... AUTHORIZATION [app_user]` |
+| Monitored table | `ALTER` and `SELECT` on `OBJECT::[schema].[table]` (`ALTER` lets the library create the trigger and carries metadata visibility) |
+
+If the schema does not exist the library creates it on startup, which requires `CREATE SCHEMA` (held by `db_owner`/`CONTROL`, and also by a database-scope `GRANT ALTER`); pre-creating it avoids granting any of those. Note this is about *creating* a schema — database-scope `GRANT ALTER`/`GRANT SELECT` are still not equivalent to the object-level grants above: db-scope `ALTER` does not confer `ALTER` on an existing schema or table (only ownership / `CONTROL` / object-level `ALTER` does), which is what the effective-permission guard checks.
+
+Earlier versions also asked for `EXECUTE`, `VIEW DEFINITION`, `VIEW DATABASE STATE` and `SUBSCRIBE QUERY NOTIFICATIONS`. They are no longer required: `SUBSCRIBE QUERY NOTIFICATIONS` belongs to the unrelated `SqlDependency` query-notification feature, and `EXECUTE`/`VIEW DEFINITION` on the activation procedure are implied by ownership of the `SqlTableDependency` schema (the procedure is run by Service Broker itself under its `EXECUTE AS` context, not invoked by the application).
 
 In case you specify SqlTableDependency's QueueExecuteAs property (default value is "SELF"), it can also be necessary set TRUSTWORTHY database property using:
 ```SQL

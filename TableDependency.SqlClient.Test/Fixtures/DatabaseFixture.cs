@@ -27,6 +27,7 @@
 #endregion
 
 using Microsoft.Data.SqlClient;
+using TableDependency.SqlClient.Test.Support;
 using Testcontainers.MsSql;
 
 [assembly: AssemblyFixture(typeof(DatabaseFixture))]
@@ -35,7 +36,11 @@ namespace TableDependency.SqlClient.Test.Fixtures;
 
 public sealed class DatabaseFixture : IAsyncLifetime
 {
+    // Admin connection for test scaffolding.
     public string MsSqlContainerConnectionString { get; private set; } = string.Empty;
+
+    // Non-admin baseline connection handed to SqlTableDependency under test: every grant plus db-wide CONTROL.
+    public string BaselineConnectionString { get; private set; } = string.Empty;
 
     private MsSqlContainer? _msSqlContainer;
     public async ValueTask InitializeAsync()
@@ -53,6 +58,13 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
 
         MsSqlContainerConnectionString = connectionString.Replace("Database=master", "Database=TableDependencyDB");
+
+        BaselineConnectionString = await SqlServerPrincipalFactory.CreateLoginAsync(
+            MsSqlContainerConnectionString,
+            "td_baseline",
+            [.. SqlServerPrincipalFactory.LegacyDatabasePermissions, "CONTROL"],
+            extraStatements: [],
+            TestContext.Current.CancellationToken);
     }
 
     public async ValueTask DisposeAsync()

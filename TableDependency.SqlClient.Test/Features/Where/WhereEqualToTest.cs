@@ -97,7 +97,7 @@ public class WhereEqualToTest(DatabaseFixture databaseFixture) : SqlTableDepende
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<EqualToTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);
@@ -144,7 +144,7 @@ public class WhereEqualToTest(DatabaseFixture databaseFixture) : SqlTableDepende
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<EqualToTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 filter: filterExpression,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);

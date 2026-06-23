@@ -81,7 +81,7 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
@@ -114,7 +114,7 @@ public class Issue177Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue177Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             tableDependency.OnException += TableDependency_OnException;
             naming = tableDependency.NamingPrefix;
