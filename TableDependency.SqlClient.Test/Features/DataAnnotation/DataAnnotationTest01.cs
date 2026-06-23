@@ -94,7 +94,7 @@ public class DataAnnotationTest01(DatabaseFixture databaseFixture) : SqlTableDep
             var mapper = new ModelToTableMapper<DataAnnotationTestSqlServer1Model>();
             mapper.AddMapping(c => c.Description, "Long Description");
 
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer1Model>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer1Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -141,7 +141,7 @@ public class DataAnnotationTest01(DatabaseFixture databaseFixture) : SqlTableDep
             mapper.AddMapping(c => c.Description, "Long Description");
 
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer1Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 includeOldEntity: true,

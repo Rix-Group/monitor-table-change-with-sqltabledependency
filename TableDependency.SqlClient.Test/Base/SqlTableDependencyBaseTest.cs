@@ -36,7 +36,14 @@ namespace TableDependency.SqlClient.Test.Base;
 public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture) : IAsyncLifetime
 {
     private readonly DatabaseFixture _databaseFixture = databaseFixture;
+
+    // Admin connection for test scaffolding.
     protected string ConnectionString => _databaseFixture.MsSqlContainerConnectionString;
+
+    // Non-admin baseline connection handed to SqlTableDependency under test (every grant plus db-wide CONTROL).
+    protected string DependencyConnectionString => _databaseFixture.BaselineConnectionString;
+
+    protected static string BrokerSchemaName => SqlTableDependency<object>.DefaultBrokerSchemaName;
 
     protected async Task<bool> AreAllDbObjectDisposedAsync(string naming, CancellationToken ct = default)
     {
@@ -66,6 +73,51 @@ public abstract class SqlTableDependencyBaseTest(DatabaseFixture databaseFixture
         var procedureExists = Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
 
         return serviceExists is 0 && senderQueueExists is 0 && receiverQueueExists is 0 && triggerExists is 0 && messageExists is 0 && procedureExists is 0 && contractExists is 0;
+    }
+
+    // Polls an async condition until it returns true or the timeout elapses.
+    protected static async Task<bool> PollUntilAsync(Func<Task<bool>> condition, TimeSpan timeout, CancellationToken ct = default)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(timeout);
+
+        while (true)
+        {
+            if (await condition())
+                return true;
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2), timeoutCts.Token);
+            }
+            catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !ct.IsCancellationRequested)
+            {
+                return false;
+            }
+        }
+    }
+
+    // Lists any leftover db objects (with owning schema) for a naming prefix; empty when fully cleaned up.
+    protected async Task<IReadOnlyList<string>> GetSurvivingDbObjectsAsync(string naming, CancellationToken ct = default)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
+
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = $@"
+SELECT 'trigger ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name) FROM sys.objects WITH (NOLOCK) WHERE name = N'tr_{naming}_Sender'
+UNION ALL SELECT 'procedure ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name) FROM sys.objects WITH (NOLOCK) WHERE name = N'{naming}_QueueActivationSender'
+UNION ALL SELECT 'queue ' + QUOTENAME(SCHEMA_NAME(schema_id)) + '.' + QUOTENAME(name) FROM sys.service_queues WITH (NOLOCK) WHERE name IN (N'{naming}_Receiver', N'{naming}_Sender')
+UNION ALL SELECT 'service ' + QUOTENAME(name) FROM sys.services WITH (NOLOCK) WHERE name IN (N'{naming}_Receiver', N'{naming}_Sender')
+UNION ALL SELECT 'contract ' + QUOTENAME(name) FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{naming}'
+UNION ALL SELECT 'message_type ' + QUOTENAME(name) FROM sys.service_message_types WITH (NOLOCK) WHERE name = N'{naming}_Updated';";
+
+        var survivors = new List<string>();
+        await using var reader = await sqlCommand.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+            survivors.Add(reader.GetString(0));
+
+        return survivors;
     }
 
     protected async Task<int> CountConversationEndpointsAsync(string? naming = null, CancellationToken ct = default)

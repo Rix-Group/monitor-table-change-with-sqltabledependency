@@ -27,8 +27,6 @@
 #endregion
 
 using Microsoft.Data.SqlClient;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace TableDependency.SqlClient.Extensions;
 
@@ -42,16 +40,6 @@ public static class SqlDataReaderExtensions
                 return null;
 
             return reader.GetValue(columnIndex)?.ToString();
-        }
-
-        public IEnumerable<Dictionary<string, object>> Serialize()
-        {
-            var cols = Enumerable.Range(0, reader.FieldCount)
-                .Select(reader.GetName)
-                .ToArray();
-
-            while (reader.Read())
-                yield return cols.ToDictionary(c => c, c => reader[c]);
         }
     }
 }

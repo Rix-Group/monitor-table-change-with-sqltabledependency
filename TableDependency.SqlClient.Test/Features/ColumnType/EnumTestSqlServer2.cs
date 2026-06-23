@@ -97,7 +97,7 @@ public class EnumTestSqlServer2(DatabaseFixture databaseFixture) : SqlTableDepen
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<EnumTestSqlServerModel2>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<EnumTestSqlServerModel2>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
 

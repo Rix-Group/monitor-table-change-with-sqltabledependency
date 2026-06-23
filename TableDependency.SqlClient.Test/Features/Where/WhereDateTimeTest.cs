@@ -83,7 +83,7 @@ public class WhereDateTimeTest(DatabaseFixture databaseFixture) : SqlTableDepend
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<TestDateTimeSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, filter: filterExpression, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<TestDateTimeSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, filter: filterExpression, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

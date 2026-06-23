@@ -93,7 +93,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
             mapper.AddMapping(c => c.Description, "Long Description");
 
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer9Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 schemaName: SchemaName,
                 mapper: mapper,
@@ -145,7 +145,7 @@ public class DataAnnotationTest09(DatabaseFixture databaseFixture) : SqlTableDep
             mapper.AddMapping(c => c.Description, "Long Description");
 
             tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer9Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 schemaName: SchemaName,
                 mapper: mapper,

@@ -86,7 +86,7 @@ public class DataAnnotationNotMappedTest1(DatabaseFixture databaseFixture) : Sql
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<DataAnnotationNotMappedTest1Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 schemaName: SchemaName,
                 includeOldEntity: false,
                 ct: TestContext.Current.CancellationToken);

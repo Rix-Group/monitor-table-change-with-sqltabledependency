@@ -62,6 +62,14 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     public const string ActivitySourceName = nameof(SqlTableDependency<>);
 
+    /// <summary>
+    /// Dedicated schema holding the Service Broker objects (queues + activation procedure); the trigger stays on the monitored table's schema.
+    /// Create it owned by the application principal (<c>CREATE SCHEMA [SqlTableDependency] AUTHORIZATION [app_user]</c>)
+    /// to run without database-wide CONTROL. If it is missing, the library creates it on startup (needs CREATE SCHEMA);
+    /// when it cannot be created a <see cref="Exceptions.BrokerSchemaUnavailableException"/> is thrown.
+    /// </summary>
+    public const string DefaultBrokerSchemaName = "SqlTableDependency";
+
     #endregion
 
     #region Private Variables
@@ -256,7 +264,6 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             throw new UpdateOfException("updateOf parameter is empty.");
 
         await _connectionString.TestConnectionAsync(ct);
-        await _connectionString.CheckUserHasPermissionsAsync(ct);
 
         var sqlVersion = await _connectionString.GetSqlServerVersionAsync(ct);
         if (sqlVersion < SqlServerVersion.SqlServer2008)
@@ -266,6 +273,10 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
         await _connectionString.CheckServiceBrokerIsEnabledAsync(ct);
         await _connectionString.CheckTableExistsAsync(SchemaName, TableName, ct);
+
+        // Create the dedicated broker schema if it does not exist, then check perms against the real securables.
+        await _connectionString.EnsureBrokerSchemaExistsAsync(DefaultBrokerSchemaName, ct);
+        await _connectionString.CheckUserHasPermissionsAsync(SchemaName, TableName, DefaultBrokerSchemaName, ct);
 
         var tableColumns = await _connectionString.GetTableColumnsAsync(SchemaName, TableName, ct);
         if (tableColumns.Length is 0)
@@ -588,31 +599,31 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Contract {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
 
-        // Queues
-        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{SchemaName}') AND name = N'{NamingPrefix}_Receiver')"
-            + $" CREATE QUEUE [{SchemaName}].[{NamingPrefix}_Receiver] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
+        // Queues (broker schema)
+        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{DefaultBrokerSchemaName}') AND name = N'{NamingPrefix}_Receiver')"
+            + $" CREATE QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Queue {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
-        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{SchemaName}') AND name = N'{NamingPrefix}_Sender')"
-            + $" CREATE QUEUE [{SchemaName}].[{NamingPrefix}_Sender] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
+        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{DefaultBrokerSchemaName}') AND name = N'{NamingPrefix}_Sender')"
+            + $" CREATE QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Queue {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Services
         sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
             ? $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Sender')"
-              + $" CREATE SERVICE [{NamingPrefix}_Sender] ON QUEUE [{SchemaName}].[{NamingPrefix}_Sender];"
+              + $" CREATE SERVICE [{NamingPrefix}_Sender] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender];"
             : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Sender')"
-              + $" CREATE SERVICE [{NamingPrefix}_Sender] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{SchemaName}].[{NamingPrefix}_Sender];";
+              + $" CREATE SERVICE [{NamingPrefix}_Sender] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender];";
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Service broker {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
         sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
             ? $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
-              + $" CREATE SERVICE [{NamingPrefix}_Receiver] ON QUEUE [{SchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);"
+              + $" CREATE SERVICE [{NamingPrefix}_Receiver] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);"
             : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
-              + $" CREATE SERVICE [{NamingPrefix}_Receiver] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{SchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);";
+              + $" CREATE SERVICE [{NamingPrefix}_Receiver] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Service broker {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
@@ -639,7 +650,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         await CreateTriggerAsync(sqlCommand, ct);
 
         // Associate Activation Store Procedure to sender queue
-        sqlCommand.CommandText = $"ALTER QUEUE [{SchemaName}].[{NamingPrefix}_Sender] WITH ACTIVATION (PROCEDURE_NAME = [{SchemaName}].[{NamingPrefix}_QueueActivationSender], MAX_QUEUE_READERS = 1, EXECUTE AS {QueueExecuteAs.ToUpper()}, STATUS = ON);";
+        sqlCommand.CommandText = $"ALTER QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender] WITH ACTIVATION (PROCEDURE_NAME = [{DefaultBrokerSchemaName}].[{NamingPrefix}_QueueActivationSender], MAX_QUEUE_READERS = 1, EXECUTE AS {QueueExecuteAs.ToUpper()}, STATUS = ON);";
         await sqlCommand.ExecuteNonQueryAsync(ct);
         LogDebug("Associated Activation Store Procedure to sender queue.");
 
@@ -962,7 +973,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         else
             sDropProc = string.Format("DISABLE TRIGGER [{1}].[tr_{0}_Sender] ON [{1}].[{2}];DROP TRIGGER [{1}].[tr_{0}_Sender];", NamingPrefix, SchemaName, TableName);
 
-        var script = string.Format(SqlScripts.ScriptDropAll, NamingPrefix, dropMessages, SchemaName, sDropProc, sDropTrig);
+        var script = string.Format(SqlScripts.ScriptDropAll, NamingPrefix, dropMessages, DefaultBrokerSchemaName, sDropProc, sDropTrig, SchemaName);
         return ActivateDatabaseLogging
             ? script
             : RemoveLogOperations(script);
@@ -970,7 +981,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     private string PrepareScriptProcedureQueueActivation(string dropAllScript)
     {
-        var script = string.Format(SqlScripts.CreateProcedureQueueActivation, NamingPrefix, dropAllScript, SchemaName);
+        var script = string.Format(SqlScripts.CreateProcedureQueueActivation, NamingPrefix, dropAllScript, DefaultBrokerSchemaName);
 
         return ActivateDatabaseLogging
             ? script
@@ -1020,7 +1031,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             // Arm the conversation timer each loop so an idle dialog eventually fires DialogTimer onto the _Sender queue.
             // The activation procedure then ends that conversation; in persisted mode its drop-all script is empty, so the
             // objects survive while the stale initiator dialog is retired (a non-persistent listener instead drops everything).
-            var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{SchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
+            var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
             var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
 
             sqlConnection = new SqlConnection(_connectionString);
@@ -1103,8 +1114,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             }
             else
             {
-                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToError);
+                // Surface the exception before the terminal status so a subscriber observing StopDueToError already has it.
                 await NotifyListenersAboutException(exception);
+                await NotifyListenersAboutStatus(TableDependencyStatus.StopDueToError);
                 LogError(exception, "Exception in WaitForNotifications.");
             }
         }

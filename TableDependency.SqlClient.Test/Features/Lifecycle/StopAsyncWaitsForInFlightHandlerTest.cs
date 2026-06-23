@@ -81,7 +81,7 @@ public sealed class StopAsyncWaitsForInFlightHandlerTest(DatabaseFixture databas
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 ct: ct);
 

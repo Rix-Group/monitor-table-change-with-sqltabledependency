@@ -132,7 +132,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue53Model1>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName1, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue53Model1>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName1, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -168,7 +168,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue53Model2>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName2, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue53Model2>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName2, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed2;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -204,7 +204,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue53Model3>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName3, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue53Model3>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName3, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed3;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -240,7 +240,7 @@ public class Issue53Test(DatabaseFixture databaseFixture) : SqlTableDependencyBa
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Issue53Model4>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName4, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Issue53Model4>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName4, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed4;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

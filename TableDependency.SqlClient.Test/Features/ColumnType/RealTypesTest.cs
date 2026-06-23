@@ -75,7 +75,7 @@ public class RealTypesTestSqlServer(DatabaseFixture databaseFixture) : SqlTableD
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<RealTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(ConnectionString, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<RealTypesTestSqlServerModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

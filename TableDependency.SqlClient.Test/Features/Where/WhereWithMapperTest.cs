@@ -103,7 +103,7 @@ public class WhereWithMapperTest(DatabaseFixture databaseFixture) : SqlTableDepe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<WithMapperTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 filter: filterExpression,
@@ -159,7 +159,7 @@ public class WhereWithMapperTest(DatabaseFixture databaseFixture) : SqlTableDepe
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<WithMapperTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 mapper: mapper,
                 filter: filterExpression,

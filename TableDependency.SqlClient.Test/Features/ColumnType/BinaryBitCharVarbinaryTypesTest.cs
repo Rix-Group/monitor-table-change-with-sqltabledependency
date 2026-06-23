@@ -98,7 +98,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<BinaryBitCharVarbinaryTypesModel>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<BinaryBitCharVarbinaryTypesModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -146,7 +146,7 @@ public class BinaryBitCharVarbinaryTypesTest(DatabaseFixture databaseFixture) : 
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<BinaryBitCharVarbinaryTypesModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 includeOldEntity: true,
                 ct: TestContext.Current.CancellationToken);

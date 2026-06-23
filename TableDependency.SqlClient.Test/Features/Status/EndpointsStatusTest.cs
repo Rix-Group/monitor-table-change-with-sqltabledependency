@@ -69,7 +69,7 @@ public class EndpointsStatusTest(DatabaseFixture databaseFixture) : SqlTableDepe
         // ARRANGE
         bool startReceivingMessages = false;
 
-        var tableDependency = await SqlTableDependency<EndpointsStatusModel>.CreateSqlTableDependencyAsync(ConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+        var tableDependency = await SqlTableDependency<EndpointsStatusModel>.CreateSqlTableDependencyAsync(DependencyConnectionString, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
         tableDependency.OnChanged += _ => startReceivingMessages = true;
         await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
         var naming = tableDependency.NamingPrefix;

@@ -94,7 +94,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
 
         try
         {
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer2Model>.CreateSqlTableDependencyAsync(ConnectionString, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer2Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;
@@ -140,7 +140,7 @@ public class DataAnnotationTest02(DatabaseFixture databaseFixture) : SqlTableDep
 
         try
         {
-            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer2Model>.CreateSqlTableDependencyAsync(ConnectionString, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<DataAnnotationTestSqlServer2Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, mapper: mapper, includeOldEntity: true, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

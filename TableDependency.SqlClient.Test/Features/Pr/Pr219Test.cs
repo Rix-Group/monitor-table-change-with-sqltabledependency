@@ -73,7 +73,7 @@ public class Pr219Test(DatabaseFixture databaseFixture) : SqlTableDependencyBase
         try
         {
             // ARRANGE
-            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(ConnectionString, schemaName: schemaName, tableName: tableName, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(DependencyConnectionString, schemaName: schemaName, tableName: tableName, ct: TestContext.Current.CancellationToken);
 
             // ACT
             schemaName = tableDependency.SchemaName;

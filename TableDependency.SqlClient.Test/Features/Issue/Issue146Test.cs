@@ -90,7 +90,7 @@ public class Issue146Test(DatabaseFixture databaseFixture) : SqlTableDependencyB
             mapper.AddMapping(c => c.Name, "BankName");
             mapper.AddMapping(c => c.Description, "BankDescription");
 
-            tableDependency = await SqlTableDependency<Bank>.CreateSqlTableDependencyAsync(ConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
+            tableDependency = await SqlTableDependency<Bank>.CreateSqlTableDependencyAsync(DependencyConnectionString, tableName: TableName, mapper: mapper, ct: TestContext.Current.CancellationToken);
             tableDependency.OnChanged += TableDependency_Changed1;
             await tableDependency.StartAsync(ct: TestContext.Current.CancellationToken);
             naming = tableDependency.NamingPrefix;

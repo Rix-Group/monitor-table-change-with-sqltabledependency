@@ -75,7 +75,7 @@ public class StartTwiceThrowsExceptionTest(DatabaseFixture databaseFixture) : Sq
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<StartTwiceThrowsExceptionTestModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 ct: TestContext.Current.CancellationToken);
 

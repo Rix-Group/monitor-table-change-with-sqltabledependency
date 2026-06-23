@@ -90,7 +90,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 updateOf: updateOf,
                 notifyOn: NotifyOn.Insert,
@@ -123,7 +123,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 updateOf: updateOf,
                 notifyOn: NotifyOn.Delete,
@@ -156,7 +156,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ACT
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 updateOf: updateOf,
                 notifyOn: NotifyOn.Delete | NotifyOn.Insert,
@@ -184,7 +184,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Insert,
                 ct: TestContext.Current.CancellationToken);
@@ -223,7 +223,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Delete,
                 ct: TestContext.Current.CancellationToken);
@@ -262,7 +262,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Update,
                 ct: TestContext.Current.CancellationToken);
@@ -301,7 +301,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Insert | NotifyOn.Delete,
                 ct: TestContext.Current.CancellationToken);
@@ -343,7 +343,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Insert | NotifyOn.Update,
                 ct: TestContext.Current.CancellationToken);
@@ -385,7 +385,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.Delete | NotifyOn.Insert | NotifyOn.Update,
                 ct: TestContext.Current.CancellationToken);
@@ -430,7 +430,7 @@ public class TriggerTypeTest(DatabaseFixture databaseFixture) : SqlTableDependen
         {
             // ARRANGE
             tableDependency = await SqlTableDependency<TriggerTypeTestSqlServerModel>.CreateSqlTableDependencyAsync(
-                ConnectionString,
+                DependencyConnectionString,
                 tableName: TableName,
                 notifyOn: NotifyOn.All,
                 ct: TestContext.Current.CancellationToken);
