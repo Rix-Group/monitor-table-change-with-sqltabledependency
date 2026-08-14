@@ -14,10 +14,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: release
 
     permissions:
       contents: read
       checks: write
+      id-token: write
 
     env:
       PROJECT_PATH: 'TableDependency.SqlClient/TableDependency.SqlClient.csproj'
@@ -25,10 +27,10 @@ jobs:
 
     steps:
       - name: ⬇️ Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🛠️ Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -70,7 +72,15 @@ jobs:
             --no-build \
             --output nupkg
 
+      - name: 🔑 Log in to NuGet with Trusted Publishing
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
       - name: ⬆️ Publish to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           DOTNET_SOURCE=https://api.nuget.org/v3/index.json
           PACKAGE_PATH=$(find ./nupkg -name "Rix.SqlTableDependency*.nupkg" | head -n 1)
@@ -79,5 +89,5 @@ jobs:
 
           dotnet nuget push $PACKAGE_PATH \
             --source $DOTNET_SOURCE \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "$NUGET_API_KEY" \
             --skip-duplicate
