@@ -53,7 +53,8 @@ jobs:
             --configuration Release \
             --no-restore \
             --framework net10.0 \
-            --logger "trx;LogFileName=unit-tests.trx" \
+            --report-trx \
+            --report-trx-filename unit-tests.trx \
             --results-directory TestResults
 
       - name: 📋 Publish Test Results
