@@ -8,11 +8,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>9285f157-9bc5-4486-a395-15cc193db49a</UserSecretsId>
+	<AspireUseCliBundle>true</AspireUseCliBundle>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.4.6" />
-	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
   </ItemGroup>
 
   <Import Project="..\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.projitems" Label="Shared" />

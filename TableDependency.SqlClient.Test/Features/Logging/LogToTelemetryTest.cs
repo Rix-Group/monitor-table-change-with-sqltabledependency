@@ -33,8 +33,6 @@ namespace TableDependency.SqlClient.Test.Features.Logging;
 
 public class LogToTelemetryTest
 {
-    private sealed class SampleModel;
-
     [Fact]
     public void NamedPlaceholderTemplate_RendersEventName_WithoutThrowing()
     {
@@ -44,10 +42,70 @@ public class LogToTelemetryTest
         (string Name, object? Value)[] values = [("NamingPrefix", "TblDep")];
 
         // ACT
-        SqlTableDependency<SampleModel>.LogToTelemetry(null, LogLevel.Debug, null, "Queue {NamingPrefix}_Receiver created.", values);
+        Telemetry.Log(null, LogLevel.Debug, null, "Queue {NamingPrefix}_Receiver created.", values);
 
         // ASSERT
         var recordedEvent = Assert.Single(activity.Events);
         Assert.Equal("Queue TblDep_Receiver created.", recordedEvent.Name);
+    }
+
+    // With no logger there is no configured level to honour, so the span event is still written.
+    [Fact]
+    public void NullLogger_AddsSpanEvent_WhateverTheLevel()
+    {
+        // ARRANGE
+        using var activity = new Activity("test");
+        activity.Start();
+
+        // ACT
+        Telemetry.Log(null, LogLevel.Debug, null, "Executing WAITFOR command.", []);
+
+        // ASSERT
+        var recordedEvent = Assert.Single(activity.Events);
+        Assert.Equal("Executing WAITFOR command.", recordedEvent.Name);
+    }
+
+    [Fact]
+    public void LevelDisabledOnLogger_AddsNoSpanEvent()
+    {
+        // ARRANGE
+        using var activity = new Activity("test");
+        activity.Start();
+        var logger = new LevelLogger(LogLevel.Information);
+
+        // ACT
+        Telemetry.Log(logger, LogLevel.Debug, null, "Executing WAITFOR command.", []);
+
+        // ASSERT
+        Assert.Empty(activity.Events);
+    }
+
+    [Fact]
+    public void LevelEnabledOnLogger_AddsSpanEvent()
+    {
+        // ARRANGE
+        using var activity = new Activity("test");
+        activity.Start();
+        var logger = new LevelLogger(LogLevel.Debug);
+
+        // ACT
+        Telemetry.Log(logger, LogLevel.Debug, null, "Executing WAITFOR command.", []);
+
+        // ASSERT
+        var recordedEvent = Assert.Single(activity.Events);
+        Assert.Equal("Executing WAITFOR command.", recordedEvent.Name);
+    }
+
+    private sealed class LevelLogger(LogLevel minimum) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => logLevel >= minimum;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+        }
     }
 }

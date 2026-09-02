@@ -1047,54 +1047,68 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
                 await NotifyListenersAboutStatus(TableDependencyStatus.WaitingForNotification);
             }
 
+            var spinGuard = new SpinGuard(_logger, timeout, watchdogTimeout);
+
             while (true)
             {
-                // Each WAITFOR gets its own trace to not get one trace in otel
-                using var activity = StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true)
+                var iterationStartedAt = Stopwatch.GetTimestamp();
+                var receivedDataMessage = false;
+
+                // Each WAITFOR gets its own trace to not get one trace in otel. The span closes before any spin backoff below, so a
+                // throttled iteration does not report its delay as WAITFOR duration; closing it also closes the reader, so the
+                // connection is not left mid-fetch while we wait.
+                using (StartActivity(nameof(WaitForNotificationsAsync), startIndependentTrace: true)
                     ?.SetTag("tabledependency.timeout", timeout)
-                    .SetTag("tabledependency.watchdogTimeout", watchdogTimeout);
-
-                await using var sqlCommand = sqlConnection.CreateCommand();
-                sqlCommand.CommandText = waitForSqlScript;
-                sqlCommand.CommandTimeout = 0;
-                LogDebug("Executing WAITFOR command.");
-
-                await using var sqlDataReader = await sqlCommand.ExecuteReaderAsync(ct);
-                LogDebug("Starting to read.");
-                while (await sqlDataReader.ReadAsync(ct))
+                    .SetTag("tabledependency.watchdogTimeout", watchdogTimeout))
                 {
-                    var message = new Message(sqlDataReader.GetSqlString(0).Value, await sqlDataReader.IsDBNullAsync(1, ct)
-                        ? null
-                        : sqlDataReader.GetSqlBytes(1).Value);
+                    await using var sqlCommand = sqlConnection.CreateCommand();
+                    sqlCommand.CommandText = waitForSqlScript;
+                    sqlCommand.CommandTimeout = 0;
+                    LogDebug("Executing WAITFOR command.");
 
-                    if (message.MessageType.Equals(SqlMessageTypes.ErrorType, StringComparison.OrdinalIgnoreCase))
+                    await using var sqlDataReader = await sqlCommand.ExecuteReaderAsync(ct);
+                    LogDebug("Starting to read.");
+                    while (await sqlDataReader.ReadAsync(ct))
                     {
-                        if (!_persisted)
-                            throw new QueueContainingErrorMessageException();
+                        var message = new Message(sqlDataReader.GetSqlString(0).Value, await sqlDataReader.IsDBNullAsync(1, ct)
+                            ? null
+                            : sqlDataReader.GetSqlBytes(1).Value);
 
-                        LogError(new QueueContainingErrorMessageException(), "Service Broker error message received; keeping listener alive.");
-                        messagesBag.Reset();
-                        continue;
-                    }
+                        if (message.MessageType.Equals(SqlMessageTypes.ErrorType, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!_persisted)
+                                throw new QueueContainingErrorMessageException();
 
-                    // Ignore service broker messages
-                    if (message.MessageType.StartsWith("http://schemas.microsoft.com/SQL/ServiceBroker/", StringComparison.OrdinalIgnoreCase))
-                    {
-                        LogDebug("Ignored system Service Broker message type = {MessageType}.", ("MessageType", message.MessageType));
-                        continue;
-                    }
+                            LogError(new QueueContainingErrorMessageException(), "Service Broker error message received; keeping listener alive.");
+                            messagesBag.Reset();
+                            continue;
+                        }
 
-                    messagesBag.AddMessage(message);
-                    LogDebug("Received message type = {MessageType}.", ("MessageType", message.MessageType));
+                        // Ignore service broker messages
+                        if (message.MessageType.StartsWith("http://schemas.microsoft.com/SQL/ServiceBroker/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            LogDebug("Ignored system Service Broker message type = {MessageType}.", ("MessageType", message.MessageType));
+                            continue;
+                        }
 
-                    if (messagesBag.Status is MessagesBagStatus.Ready)
-                    {
-                        LogDebug("Message ready to be notified.");
-                        await NotifyListenersAboutChange(messagesBag);
-                        LogDebug("Message notified.");
-                        messagesBag.Reset();
+                        // Only a data message proves the RECEIVE genuinely returned early. Error and system rows do not: a torn dialog
+                        // can deliver them on every iteration, which would reset the spin guard and leave the loop hammering the queue.
+                        receivedDataMessage = true;
+
+                        messagesBag.AddMessage(message);
+                        LogDebug("Received message type = {MessageType}.", ("MessageType", message.MessageType));
+
+                        if (messagesBag.Status is MessagesBagStatus.Ready)
+                        {
+                            LogDebug("Message ready to be notified.");
+                            await NotifyListenersAboutChange(messagesBag);
+                            LogDebug("Message notified.");
+                            messagesBag.Reset();
+                        }
                     }
                 }
+
+                await spinGuard.ThrottleAsync(receivedDataMessage, Stopwatch.GetElapsedTime(iterationStartedAt), ct);
             }
         }
         catch (Exception exception)
@@ -1207,42 +1221,13 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     }
 
     private void LogDebug(string message, params (string Name, object? Value)[] values)
-        => LogToTelemetry(LogLevel.Debug, null, message, values);
+        => Telemetry.Log(_logger, LogLevel.Debug, null, message, values);
 
     private void LogInformation(string message, params (string Name, object? Value)[] values)
-        => LogToTelemetry(LogLevel.Information, null, message, values);
+        => Telemetry.Log(_logger, LogLevel.Information, null, message, values);
 
     private void LogError(Exception exception, string message, params (string Name, object? Value)[] values)
-        => LogToTelemetry(LogLevel.Error, exception, message, values);
-
-    private void LogToTelemetry(LogLevel level, Exception? exception, string template, (string Name, object? Value)[] values)
-        => LogToTelemetry(_logger, level, exception, template, values);
-
-    internal static void LogToTelemetry(ILogger? logger, LogLevel level, Exception? exception, string template, (string Name, object? Value)[] values)
-    {
-        logger?.Log(level, exception, template, [.. values.Select(v => v.Value)]);
-
-        var activity = Activity.Current;
-        if (activity is null)
-            return;
-
-        var tags = new ActivityTagsCollection { { "log.level", level.ToString() } };
-
-        if (exception is not null)
-        {
-            tags.Add("exception.type", exception.GetType().FullName ?? "unknown");
-            tags.Add("exception.message", exception.Message);
-        }
-
-        foreach (var (name, value) in values)
-            tags[name] = value ?? "null";
-
-        var eventName = template;
-        foreach (var (name, value) in values)
-            eventName = eventName.Replace($"{{{name}}}", value?.ToString() ?? "null");
-
-        activity.AddEvent(new ActivityEvent(eventName, tags: tags));
-    }
+        => Telemetry.Log(_logger, LogLevel.Error, exception, message, values);
 
     #endregion
 
