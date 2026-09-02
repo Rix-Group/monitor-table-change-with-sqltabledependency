@@ -72,8 +72,7 @@ public class SpinGuardTest
         Assert.Equal(expected, seconds);
     }
 
-    // The receive command re-arms the conversation timer every iteration, so a capped backoff must outlast watchdogTimeout for the
-    // DialogTimer to ever fire and retire the stale dialog; a cap at or below it would leave a spin unable to clear itself.
+    // Capped backoff must outlast watchdogTimeout so the DialogTimer can fire and retire the stale dialog.
     [Theory]
     [InlineData(120)]
     [InlineData(180)]
@@ -261,8 +260,7 @@ public class SpinGuardTest
             await guard.ThrottleAsync(receivedDataMessage: false, elapsed, TestContext.Current.CancellationToken);
 
         // ASSERT
-        // The reminder fires on the first iteration that carries the accumulator past the interval, so at a ~190s iteration it lands
-        // every fourth one: a few times an hour, and far rarer than the one line per iteration this replaced.
+        // At a ~190s capped iteration, the reminder lands a few times an hour instead of once per iteration.
         var whileCapped = logger.Count(LogLevel.Warning) - whileClimbing;
         Assert.InRange(whileCapped, 3, 6);
         Assert.True(whileCapped * 3 <= iterations, $"{whileCapped} reminders over {iterations} iterations is not rare enough");
