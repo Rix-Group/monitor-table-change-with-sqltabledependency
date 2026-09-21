@@ -19,7 +19,9 @@
 ## Notes
 - Target framework is `net10.0`; use a matching SDK.
 - Use modern features such as collection expressions, extension blocks, pattern matching, is null, file-scoped namespaces.
-- All files should be formatted in CRLF.
+- All files should be formatted in CRLF, except `.github/workflows/*.yml`, which must stay LF:
+  Dependabot's github_actions updater matches `uses:` declarations with an LF-only regex and fails
+  with "No files changed!" on CRLF workflows.
 - Don't add a trailing line to the end of a file.
 - Always run the unit tests related to any code changes you make.
 - Always add/update related unit tests.

@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# Dependabot's github_actions updater matches uses: declarations with an LF-only regex.
+.github/workflows/*.yml text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
