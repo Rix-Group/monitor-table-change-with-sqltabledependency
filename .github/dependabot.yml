@@ -6,10 +6,11 @@ updates:
     directory: /
     target-branch: main
     schedule:
-      interval: weekly
-      day: wednesday
+      interval: daily
       time: "06:00"
       timezone: Europe/London
+    cooldown:
+      default-days: 0
     open-pull-requests-limit: 10
     commit-message:
       prefix: build
@@ -37,10 +38,11 @@ updates:
     directory: /
     target-branch: main
     schedule:
-      interval: weekly
-      day: wednesday
+      interval: daily
       time: "06:00"
       timezone: Europe/London
+    cooldown:
+      default-days: 0
     commit-message:
       prefix: ci
       include: scope
