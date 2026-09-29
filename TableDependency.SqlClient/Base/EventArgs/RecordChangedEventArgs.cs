@@ -52,6 +52,9 @@ public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
 
     #region Properties
 
+    protected Encoding MessageEncoding => _messagesBag?.Encoding
+        ?? throw new InvalidOperationException("No messages bag: this instance was created without database messages to decode.");
+
     public T Entity { get; }
     public T? OldEntity { get; }
     public ChangeType ChangeType { get; }
@@ -125,7 +128,7 @@ public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
 
     private object? GetValueObject(PropertyInfo propertyInfo, byte[] message)
     {
-        var value = Convert.ToString(_messagesBag!.Encoding.GetString(message), CultureInfo);
+        var value = Convert.ToString(MessageEncoding.GetString(message), CultureInfo);
         var propertyType = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
         var typeCode = Type.GetTypeCode(propertyType);
 

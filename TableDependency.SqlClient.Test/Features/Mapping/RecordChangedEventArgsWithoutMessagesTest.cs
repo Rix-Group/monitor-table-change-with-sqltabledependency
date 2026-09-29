@@ -26,24 +26,29 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Globalization;
-using TableDependency.SqlClient.Base.Interfaces;
-using TableDependency.SqlClient.Base.Messages;
+using TableDependency.SqlClient.Base.Enums;
+using TableDependency.SqlClient.Base.EventArgs;
 
-namespace TableDependency.SqlClient.Base.EventArgs;
+namespace TableDependency.SqlClient.Test.Features.Mapping;
 
-public sealed class ExpandoRecordChangedEventArgs(MessagesBag messagesBag, string server, string database, string sender, CultureInfo cultureInfo, bool includeOldEntity = false)
-    : RecordChangedEventArgs<ExpandoObject>(messagesBag, null, server, database, sender, cultureInfo, includeOldEntity)
+public class RecordChangedEventArgsWithoutMessagesTest
 {
-    protected override ExpandoObject MaterializeEntity(List<Message> messages, IModelToTableMapper<ExpandoObject>? mapper)
+    private sealed class SampleModel
     {
-        var eo = new ExpandoObject();
-        foreach (var message in messages)
-            eo.TryAdd(message.Recipient, message.Body?.Length is null or 0 ? null : Convert.ToString(MessageEncoding.GetString(message.Body), CultureInfo));
+        public int Id { get; set; }
+    }
 
-        return eo;
+    [Fact]
+    public void GetValue_WithoutMessagesBag_ThrowsInvalidOperation()
+    {
+        // ARRANGE
+        var eventArgs = new RecordChangedEventArgs<SampleModel>(ChangeType.Insert, new SampleModel());
+        var property = typeof(SampleModel).GetProperty(nameof(SampleModel.Id)) ?? throw new InvalidOperationException();
+
+        // ACT
+        var exception = Record.Exception(() => eventArgs.GetValue(property, [0x31, 0x00]));
+
+        // ASSERT
+        Assert.IsType<InvalidOperationException>(exception);
     }
 }
