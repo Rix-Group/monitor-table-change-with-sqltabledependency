@@ -1,3 +1,4 @@
+// aislop-ignore-file complexity/file-too-large -- Partial extraction would fragment the cohesive listener implementation and its private state.
 #region License
 
 // TableDependency, SqlTableDependency
@@ -57,6 +58,7 @@ using TableDependency.SqlClient.Resources;
 
 namespace TableDependency.SqlClient;
 
+// aislop-ignore-next-block complexity/function-too-long -- This type coordinates the listener lifecycle and deliberately owns its state.
 public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class, new()
 {
     #region Public Constants
@@ -185,6 +187,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     /// <param name="includeOldEntity">if set to <c>true</c>, include old entity.</param>
     /// <param name="persistentId">An id to append to the naming convention that enables queue persistence on restart.</param>
     /// <param name="ct">Cancellation token.</param>
+    // aislop-ignore-next-block complexity/too-many-params -- Preserve the established named-argument construction API.
     public static async Task<SqlTableDependency<T>> CreateSqlTableDependencyAsync(
         string connectionString,
         string? schemaName = null,
@@ -566,6 +569,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         return messages;
     }
 
+    // aislop-ignore-next-block complexity/function-too-long -- The ordered DDL transaction must remain inspectable as one unit.
     private async Task CreateDatabaseObjectsAsync(int watchdogTimeout, CancellationToken ct)
     {
         using var activity = StartActivity(nameof(CreateDatabaseObjectsAsync))
@@ -1032,6 +1036,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     #region WaitForNotifications
 
+    // aislop-ignore-next-block complexity/function-too-long -- Receive, notification dispatch, and terminal status handling share one connection lifetime.
     private async Task WaitForNotificationsAsync(
         int timeout,
         int watchdogTimeout,

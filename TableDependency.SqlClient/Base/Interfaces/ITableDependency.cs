@@ -36,6 +36,7 @@ using TableDependency.SqlClient.Base.EventArgs;
 
 namespace TableDependency.SqlClient.Base.Interfaces;
 
+// aislop-ignore-next-block complexity/function-too-long -- This is the intentionally complete public listener contract.
 public interface ITableDependency<T> : IAsyncDisposable where T : class, new()
 {
     #region Events
