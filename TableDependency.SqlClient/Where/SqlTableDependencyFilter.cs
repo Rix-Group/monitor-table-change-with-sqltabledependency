@@ -109,187 +109,64 @@ public sealed class SqlTableDependencyFilter<T> : ExpressionVisitor, ITableDepen
         if (node.Method.DeclaringType == typeof(Queryable) && node.Method.Name is "Where")
             throw new ArgumentException("Cannot translate where of type Queryable.");
 
-        #region Trim
-
-        if (node.Method.Name is "Trim")
+        switch (node.Method.Name)
         {
-            _whereConditionBuilder.Append("LTRIM(RTRIM(");
-            Visit(node.Object);
-            _whereConditionBuilder.Append("))");
+            case "Trim":
+                VisitWrapped(node.Object, "LTRIM(RTRIM(", "))");
+                break;
 
-            return node;
-        }
+            case "TrimStart":
+                VisitWrapped(node.Object, "LTRIM(", ")");
+                break;
 
-        #endregion
+            case "TrimEnd":
+                VisitWrapped(node.Object, "RTRIM(", ")");
+                break;
 
-        #region StartsWith
+            case "ToUpper":
+                VisitWrapped(node.Object, "UPPER(", ")");
+                break;
 
-        if (node.Method.Name is "StartsWith")
-        {
-            Visit(node.Object);
-            _whereConditionBuilder.Append(" LIKE ");
+            case "ToLower":
+                VisitWrapped(node.Object, "LOWER(", ")");
+                break;
 
-            _parameter.Append = "%";
-            Visit(node.Arguments[0]);
-            return node;
-        }
+            case "ToString":
+                VisitWrapped(node.Object, "CONVERT(varchar(MAX), ", ")");
+                break;
 
-        #endregion
+            case "StartsWith":
+                VisitLike(node, prepend: null, append: "%");
+                break;
 
-        #region EndsWith
+            case "EndsWith":
+                VisitLike(node, prepend: "%", append: null);
+                break;
 
-        if (node.Method.Name is "EndsWith")
-        {
-            Visit(node.Object);
-            _whereConditionBuilder.Append(" LIKE ");
+            // Enumerable.Contains(collection, item) -> [column] IN (val1, val2, ...)
+            case "Contains" when node.Object is null:
+                VisitIn(node);
+                break;
 
-            _parameter.Prepend = "%";
-            Visit(node.Arguments[0]);
-            return node;
-        }
+            case "Contains":
+                VisitLike(node, prepend: "%", append: "%");
+                break;
 
-        #endregion
+            case "Substring":
+                VisitSubstring(node);
+                break;
 
-        #region Contains
-
-        if (node.Method.Name is "Contains")
-        {
-            if (node.Object is null)
-            {
-                // Enumerable.Contains(collection, item) -> translate to SQL: [column] IN (val1, val2, ...)
-                // arguments: [0] = collection, [1] = item
-                Visit(node.Arguments[1]);
-                _whereConditionBuilder.Append(" IN ");
-
-                // Evaluate the collection expression to get the values
-                var methodCallExpression = (MethodCallExpression)node.Arguments[0];
-                var memberExpression = (MemberExpression)methodCallExpression.Arguments[0];
-
-                var lambda = Expression.Lambda(memberExpression);
-                var getter = lambda.Compile();
-                var collectionObj = getter.DynamicInvoke();
-
-                if (collectionObj is not IEnumerable values)
-                    throw new ArgumentException("The first argument of Contains must be an IEnumerable.");
-
-                _whereConditionBuilder.Append(FormatInValues(values));
-            }
-            else
-            {
+            case "Equals" when node.Object is not null:
                 Visit(node.Object);
-                _whereConditionBuilder.Append(" LIKE ");
-
-                _parameter.Prepend = "%";
-                _parameter.Append = "%";
+                _whereConditionBuilder.Append(" = ");
                 Visit(node.Arguments[0]);
-            }
+                break;
 
-            return node;
+            default:
+                throw new NotSupportedException($"The method '{node.Method.Name}' is not supported.");
         }
 
-        #endregion
-
-        #region TrimStart
-
-        if (node.Method.Name is "TrimStart")
-        {
-            _whereConditionBuilder.Append("LTRIM(");
-            Visit(node.Object);
-            _whereConditionBuilder.Append(')');
-
-            return node;
-        }
-
-        #endregion
-
-        #region TrimEnd
-
-        if (node.Method.Name is "TrimEnd")
-        {
-            _whereConditionBuilder.Append("RTRIM(");
-            Visit(node.Object);
-            _whereConditionBuilder.Append(')');
-
-            return node;
-        }
-
-        #endregion
-
-        #region ToUpper
-
-        if (node.Method.Name is "ToUpper")
-        {
-            _whereConditionBuilder.Append("UPPER(");
-            Visit(node.Object);
-            _whereConditionBuilder.Append(')');
-
-            return node;
-        }
-
-        #endregion
-
-        #region ToLower
-
-        if (node.Method.Name is "ToLower")
-        {
-            _whereConditionBuilder.Append("LOWER(");
-            Visit(node.Object);
-            _whereConditionBuilder.Append(')');
-
-            return node;
-        }
-
-        #endregion
-
-        #region Substring
-
-        if (node.Method.Name is "Substring")
-        {
-            _whereConditionBuilder.Append("SUBSTRING(");
-            Visit(node.Object);
-
-            var startParameter = (ConstantExpression)node.Arguments[0];
-            if (!int.TryParse(startParameter?.Value?.ToString(), out int intResult))
-                throw new ArgumentNullException(nameof(node), "Could not parse arguments[0] as an int.");
-            _whereConditionBuilder.Append(", " + intResult);
-
-            var lenParameter = (ConstantExpression)node.Arguments[1];
-            if (!int.TryParse(lenParameter?.Value?.ToString(), out intResult))
-                throw new ArgumentNullException(nameof(node), "Could not parse arguments[1] as an int.");
-            _whereConditionBuilder.Append(", " + intResult + ")");
-
-            return node;
-        }
-
-        #endregion
-
-        #region ToString
-
-        if (node.Method.Name is "ToString")
-        {
-            _whereConditionBuilder.Append("CONVERT(varchar(MAX), ");
-            Visit(node.Object);
-            _whereConditionBuilder.Append(')');
-
-            return node;
-        }
-
-        #endregion
-
-        #region Equals
-
-        if (node.Method.Name is "Equals" && node.Object is not null)
-        {
-            Visit(node.Object);
-            _whereConditionBuilder.Append(" = ");
-            Visit(node.Arguments[0]);
-
-            return node;
-        }
-
-        #endregion
-
-        throw new NotSupportedException($"The method '{node.Method.Name}' is not supported.");
+        return node;
     }
 
     protected override Expression VisitUnary(UnaryExpression node)
@@ -439,6 +316,58 @@ public sealed class SqlTableDependencyFilter<T> : ExpressionVisitor, ITableDepen
     #endregion
 
     #region Private Methods
+
+    private void VisitWrapped(Expression? operand, string open, string close)
+    {
+        _whereConditionBuilder.Append(open);
+        Visit(operand);
+        _whereConditionBuilder.Append(close);
+    }
+
+    private void VisitLike(MethodCallExpression node, string? prepend, string? append)
+    {
+        Visit(node.Object);
+        _whereConditionBuilder.Append(" LIKE ");
+
+        if (prepend is not null)
+            _parameter.Prepend = prepend;
+        if (append is not null)
+            _parameter.Append = append;
+        Visit(node.Arguments[0]);
+    }
+
+    private void VisitIn(MethodCallExpression node)
+    {
+        // Arguments: [0] = collection, [1] = item.
+        Visit(node.Arguments[1]);
+        _whereConditionBuilder.Append(" IN ");
+
+        var methodCallExpression = (MethodCallExpression)node.Arguments[0];
+        var memberExpression = (MemberExpression)methodCallExpression.Arguments[0];
+        var collectionObj = Expression.Lambda(memberExpression).Compile().DynamicInvoke();
+
+        if (collectionObj is not IEnumerable values)
+            throw new ArgumentException("The first argument of Contains must be an IEnumerable.");
+
+        _whereConditionBuilder.Append(FormatInValues(values));
+    }
+
+    private void VisitSubstring(MethodCallExpression node)
+    {
+        _whereConditionBuilder.Append("SUBSTRING(");
+        Visit(node.Object);
+        _whereConditionBuilder.Append(", " + ParseIntArgument(node, 0));
+        _whereConditionBuilder.Append(", " + ParseIntArgument(node, 1) + ")");
+    }
+
+    private static int ParseIntArgument(MethodCallExpression node, int index)
+    {
+        var parameter = (ConstantExpression)node.Arguments[index];
+        if (!int.TryParse(parameter?.Value?.ToString(), out var intResult))
+            throw new ArgumentNullException(nameof(node), $"Could not parse arguments[{index}] as an int.");
+
+        return intResult;
+    }
 
     private static string FormatInValues(IEnumerable? values)
     {
