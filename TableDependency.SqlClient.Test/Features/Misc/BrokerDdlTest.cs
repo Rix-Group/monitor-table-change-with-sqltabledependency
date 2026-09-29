@@ -29,6 +29,7 @@
 using Microsoft.Data.SqlClient;
 using TableDependency.SqlClient.Base.Enums;
 using TableDependency.SqlClient.Extensions;
+using TableDependency.SqlClient.Resources;
 
 namespace TableDependency.SqlClient.Test.Features.Misc;
 
@@ -163,6 +164,28 @@ public class BrokerDdlTest(DatabaseFixture databaseFixture) : SqlTableDependency
         var sqlException = Assert.IsType<SqlException>(exception);
         Assert.Contains("exceeds 128 characters", sqlException.Message);
         Assert.True(await AreAllDbObjectDisposedAsync(tableDependency.NamingPrefix, ct));
+    }
+
+    [Fact]
+    public async Task BeginConversation_OverSysnameLength_RaisesAnError()
+    {
+        // ARRANGE
+        var ct = TestContext.Current.CancellationToken;
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = SqlScripts.BeginConversation;
+        sqlCommand.Parameters.AddWithValue("@sender", new string('a', 129));
+        sqlCommand.Parameters.AddWithValue("@receiver", "unused");
+        sqlCommand.Parameters.AddWithValue("@contract", "unused");
+
+        // ACT
+        var exception = await Record.ExceptionAsync(() => sqlCommand.ExecuteScalarAsync(ct));
+
+        // ASSERT
+        var sqlException = Assert.IsType<SqlException>(exception);
+        Assert.Equal(50000, sqlException.Number);
+        Assert.Contains("exceeds 128 characters", sqlException.Message);
     }
 
     [Theory]
