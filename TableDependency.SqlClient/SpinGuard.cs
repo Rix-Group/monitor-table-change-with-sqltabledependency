@@ -61,9 +61,7 @@ internal sealed class SpinGuard
         _logger = logger;
         _timeout = timeout;
 
-        // The receive command re-arms BEGIN CONVERSATION TIMER on every iteration, which replaces the pending timer, so while the
-        // loop spins the DialogTimer never fires and the stale dialog is never retired - the spin cannot clear itself. Capping the
-        // backoff above watchdogTimeout makes a throttled iteration outlast that timer, so it fires and the dialog gets torn down.
+        // Above watchdogTimeout so a throttled iteration outlasts the re-armed DialogTimer, letting it retire the stale dialog.
         BackoffMax = TimeSpan.FromSeconds(watchdogTimeout + WatchdogHeadroomSeconds);
         _delay = delay ?? Task.Delay;
     }
