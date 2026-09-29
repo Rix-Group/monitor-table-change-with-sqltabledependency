@@ -1050,7 +1050,15 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             // The activation procedure then ends that conversation; in persisted mode its drop-all script is empty, so the
             // objects survive while the stale initiator dialog is retired (a non-persistent listener instead drops everything).
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
-            var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
+            var waitForSqlScript = _persisted
+                ? "DECLARE @conversationHandle UNIQUEIDENTIFIER;"
+                  + " SELECT TOP(1) @conversationHandle = conversation_handle"
+                  + " FROM sys.conversation_endpoints WITH (NOLOCK)"
+                  + " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')"
+                  + " AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);"
+                  + " IF @conversationHandle IS NOT NULL BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;"
+                : "BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;";
+            waitForSqlScript += receiveStatement;
 
             sqlConnection = new SqlConnection(_connectionString);
 
@@ -1082,6 +1090,14 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
                     await using var sqlCommand = sqlConnection.CreateCommand();
                     sqlCommand.CommandText = waitForSqlScript;
                     sqlCommand.CommandTimeout = 0;
+                    sqlCommand.Parameters.AddWithValue("@watchdogTimeout", watchdogTimeout);
+                    if (_persisted)
+                    {
+                        sqlCommand.Parameters.AddWithValue("@farService", $"{NamingPrefix}_Receiver");
+                        sqlCommand.Parameters.AddWithValue("@localService", $"{NamingPrefix}_Sender");
+                    }
+                    else
+                        sqlCommand.Parameters.AddWithValue("@conversationHandle", _conversationHandle);
                     LogDebug("Executing WAITFOR command.");
 
                     await using var sqlDataReader = await sqlCommand.ExecuteReaderAsync(ct);

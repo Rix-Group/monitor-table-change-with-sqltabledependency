@@ -125,6 +125,12 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
 
             var deliveredEntity = await inserted.Task;
             Assert.Equal("after-watchdog", deliveredEntity.Name);
+
+            // The next receive iteration must arm the replacement dialog, not the retired handle.
+            await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+            Assert.Equal(TableDependencyStatus.WaitingForNotification, tableDependency.Status);
+            Assert.DoesNotContain(TableDependencyStatus.StopDueToError, statuses);
+            Assert.Null(listenerException);
         }
         finally
         {
