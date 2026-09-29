@@ -1,5 +1,5 @@
 # Monitor and receive notifications on record table change
-![License](https://img.shields.io/badge/License-MIT-red.svg) ![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-green.svg) ![.NET](https://img.shields.io/badge/.NET%20-%3E%3D%2010.0.0-blue.svg) [![NuGet Badge](https://img.shields.io/nuget/v/Rix.SqlTableDependency?label=NuGet&color=purple)](https://www.nuget.org/packages/Rix.SqlTableDependency/)
+![License](https://img.shields.io/badge/License-MIT-red.svg) ![SQL Server](https://img.shields.io/badge/SQL%20Server-%3E%3D2008R2-green.svg) ![.NET](https://img.shields.io/badge/.NET%20-%3E%3D%2010.0.0-blue.svg) [![NuGet Badge](https://img.shields.io/nuget/v/Rix.SqlTableDependency?label=NuGet&color=purple)](https://www.nuget.org/packages/Rix.SqlTableDependency/) [![aislop](https://badges.scanaislop.com/score/Rix-Group/monitor-table-change-with-sqltabledependency.svg)](https://scanaislop.com/Rix-Group/monitor-table-change-with-sqltabledependency)
 
 **SqlTableDependency** is a high-level C# component used to audit, monitor and receive notifications on SQL Server's record table changes. 
 
