@@ -1,6 +1,6 @@
-﻿#region License
+﻿// aislop-ignore-file complexity/file-too-large -- An ExpressionVisitor requires its related overrides and SQL-formatting helpers together.
+#region License
 
-// aislop-ignore-file complexity/file-too-large -- An ExpressionVisitor requires its related overrides and SQL-formatting helpers together.
 // TableDependency, SqlTableDependency, SqlTableDependencyFilter
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
 //
