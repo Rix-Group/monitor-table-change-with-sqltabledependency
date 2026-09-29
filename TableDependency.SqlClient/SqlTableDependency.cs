@@ -642,12 +642,14 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         // Trigger
         await CreateTriggerAsync(sqlCommand, ct);
 
-        // Associate Activation Store Procedure to sender queue; a quoted user name ('user') is accepted as well as a bare one.
+        // Associate Activation Store Procedure to sender queue. Quoted names stay distinct from SELF and OWNER keywords.
+        var (executeAs, executeAsIsQuoted) = NormalizeQueueExecuteAs(QueueExecuteAs);
         await PrepareCommand(sqlCommand, SqlScripts.ActivateQueue,
             ("@schema", DefaultBrokerSchemaName),
             ("@queue", $"{NamingPrefix}_Sender"),
             ("@procedure", $"{NamingPrefix}_QueueActivationSender"),
-            ("@executeAs", QueueExecuteAs.Trim().Trim('\''))).ExecuteNonQueryAsync(ct);
+            ("@executeAs", executeAs),
+            ("@executeAsIsQuoted", executeAsIsQuoted)).ExecuteNonQueryAsync(ct);
         LogDebug("Associated Activation Store Procedure to sender queue.");
 
         // Run the watch-dog
@@ -944,6 +946,16 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             sqlCommand.Parameters.AddWithValue(name, value ?? DBNull.Value);
 
         return sqlCommand;
+    }
+
+    private static (string Value, bool IsQuoted) NormalizeQueueExecuteAs(string queueExecuteAs)
+    {
+        var value = queueExecuteAs.Trim();
+        var isQuoted = value.Length >= 2 && value[0] is '\'' && value[^1] is '\'';
+
+        return isQuoted
+            ? (value[1..^1].Replace("''", "'", StringComparison.Ordinal), true)
+            : (value, false);
     }
 
     private string CreateWhereCondition(bool prependSpace = false)

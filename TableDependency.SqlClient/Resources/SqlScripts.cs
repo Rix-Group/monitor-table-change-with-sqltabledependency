@@ -249,10 +249,11 @@ END";
     END";
 
     // @schema = broker schema; @queue = sender queue; @procedure = activation procedure; @executeAs = SELF, OWNER or a user name.
+    // @executeAsIsQuoted distinguishes a principal literally named SELF or OWNER from those keywords.
     public const string ActivateQueue = @"DECLARE @sql NVARCHAR(MAX) = N'ALTER QUEUE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@queue)
         + N' WITH ACTIVATION (PROCEDURE_NAME = ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@procedure)
         + N', MAX_QUEUE_READERS = 1, EXECUTE AS '
-        + CASE WHEN UPPER(@executeAs) IN (N'SELF', N'OWNER') THEN UPPER(@executeAs) ELSE QUOTENAME(@executeAs, N'''') END
+        + CASE WHEN @executeAsIsQuoted = 0 AND UPPER(@executeAs) IN (N'SELF', N'OWNER') THEN UPPER(@executeAs) ELSE QUOTENAME(@executeAs, N'''') END
         + N', STATUS = ON);';" + RaiseOnNullSql;
 
     // @sender/@receiver = services; @contract = contract name. Returns the new conversation handle.

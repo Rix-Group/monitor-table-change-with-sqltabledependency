@@ -44,19 +44,27 @@ public class BrokerDdlTest(DatabaseFixture databaseFixture) : SqlTableDependency
 
     private const string TableName = nameof(BrokerDdlModel);
     private const string BaselineUser = "td_baseline";
+    private const string OwnerUser = "OWNER";
+    private const string ApostropheUser = "td_o'Brien";
     private const int OwnerPrincipalId = -2;
 
     public override async ValueTask InitializeAsync()
     {
         await ExecuteAsync(
             $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];"
-            + $"CREATE TABLE [{TableName}] ([Id] INT NOT NULL PRIMARY KEY, [Name] NVARCHAR(50) NOT NULL);",
+            + $"CREATE TABLE [{TableName}] ([Id] INT NOT NULL PRIMARY KEY, [Name] NVARCHAR(50) NOT NULL);"
+            + $"IF DATABASE_PRINCIPAL_ID(N'{OwnerUser}') IS NULL CREATE USER [{OwnerUser}] WITHOUT LOGIN;"
+            + "IF DATABASE_PRINCIPAL_ID(N'td_o''Brien') IS NULL CREATE USER [td_o'Brien] WITHOUT LOGIN;",
             TestContext.Current.CancellationToken);
     }
 
     public override async ValueTask DisposeAsync()
     {
-        await ExecuteAsync($"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];", CancellationToken.None);
+        await ExecuteAsync(
+            $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];"
+            + "IF DATABASE_PRINCIPAL_ID(N'td_o''Brien') IS NOT NULL DROP USER [td_o'Brien];"
+            + $"IF DATABASE_PRINCIPAL_ID(N'{OwnerUser}') IS NOT NULL DROP USER [{OwnerUser}];",
+            CancellationToken.None);
     }
 
     [Fact]
@@ -213,6 +221,41 @@ public class BrokerDdlTest(DatabaseFixture databaseFixture) : SqlTableDependency
     }
 
     [Fact]
+    public async Task QueueExecuteAs_QuotedOwner_TargetsPrincipalNamedOwner()
+    {
+        // ARRANGE
+        var ct = TestContext.Current.CancellationToken;
+        await using var tableDependency = await CreateAsync(includeOldEntity: false, ct);
+        tableDependency.QueueExecuteAs = "'OWNER'";
+        var expected = await DatabasePrincipalIdAsync(OwnerUser, ct);
+        Assert.NotEqual(OwnerPrincipalId, expected);
+
+        // ACT
+        await tableDependency.StartAsync(ct: ct);
+
+        // ASSERT
+        var actual = await ScalarAsync($"SELECT execute_as_principal_id FROM sys.service_queues WHERE name = N'{tableDependency.NamingPrefix}_Sender';", ct);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public async Task QueueExecuteAs_QuotedPrincipalWithEscapedApostrophe_TargetsPrincipal()
+    {
+        // ARRANGE
+        var ct = TestContext.Current.CancellationToken;
+        await using var tableDependency = await CreateAsync(includeOldEntity: false, ct);
+        tableDependency.QueueExecuteAs = "'td_o''Brien'";
+        var expected = await DatabasePrincipalIdAsync(ApostropheUser, ct);
+
+        // ACT
+        await tableDependency.StartAsync(ct: ct);
+
+        // ASSERT
+        var actual = await ScalarAsync($"SELECT execute_as_principal_id FROM sys.service_queues WHERE name = N'{tableDependency.NamingPrefix}_Sender';", ct);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public async Task CheckIfDatabaseObjectsExist_MatchesLivePrefixOnly()
     {
         // ARRANGE
@@ -262,6 +305,17 @@ public class BrokerDdlTest(DatabaseFixture databaseFixture) : SqlTableDependency
 
         await using var sqlCommand = sqlConnection.CreateCommand();
         sqlCommand.CommandText = commandText;
+        return Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
+    }
+
+    private async Task<int> DatabasePrincipalIdAsync(string name, CancellationToken ct)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+        await sqlConnection.OpenAsync(ct);
+
+        await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.CommandText = "SELECT DATABASE_PRINCIPAL_ID(@name);";
+        sqlCommand.Parameters.AddWithValue("@name", name);
         return Convert.ToInt32(await sqlCommand.ExecuteScalarAsync(ct));
     }
 
