@@ -989,23 +989,28 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             : RemoveLogOperations(script);
     }
 
-    private static string RemoveLogOperations(string source)
+    internal static string RemoveLogOperations(string source)
     {
+        const string logStart = "PRINT N'SqlTableDependency:";
+        const string logEnd = ".';";
+
+        var result = new StringBuilder(source.Length);
+        var position = 0;
         while (true)
         {
-            var startPos = source.IndexOf("PRINT N'SqlTableDependency:", StringComparison.InvariantCultureIgnoreCase);
+            var startPos = source.IndexOf(logStart, position, StringComparison.InvariantCultureIgnoreCase);
             if (startPos < 1)
                 break;
 
-            var endPos = source.IndexOf(".';", startPos, StringComparison.InvariantCultureIgnoreCase);
+            var endPos = source.IndexOf(logEnd, startPos, StringComparison.InvariantCultureIgnoreCase);
             if (endPos < 1)
                 break;
 
-            endPos += ".';".Length;
-            source = source[..startPos] + source[endPos..];
+            result.Append(source, position, startPos - position);
+            position = endPos + logEnd.Length;
         }
 
-        return source;
+        return result.Append(source, position, source.Length - position).ToString();
     }
 
     private static string Spacer(int numberOfSpaces)
