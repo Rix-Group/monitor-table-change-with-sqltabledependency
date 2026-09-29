@@ -26,24 +26,33 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.Globalization;
-using TableDependency.SqlClient.Base.Interfaces;
-using TableDependency.SqlClient.Base.Messages;
+namespace TableDependency.SqlClient.Test.Features.Misc;
 
-namespace TableDependency.SqlClient.Base.EventArgs;
-
-public sealed class ExpandoRecordChangedEventArgs(MessagesBag messagesBag, string server, string database, string sender, CultureInfo cultureInfo, bool includeOldEntity = false)
-    : RecordChangedEventArgs<ExpandoObject>(messagesBag, null, server, database, sender, cultureInfo, includeOldEntity)
+public class RemoveLogOperationsTest
 {
-    protected override ExpandoObject MaterializeEntity(List<Message> messages, IModelToTableMapper<ExpandoObject>? mapper)
+    [Fact]
+    public void RemovesEveryLogStatementAndKeepsTheRest()
     {
-        var eo = new ExpandoObject();
-        foreach (var message in messages)
-            eo.TryAdd(message.Recipient, message.Body?.Length is null or 0 ? null : Convert.ToString(MessageEncoding.GetString(message.Body), CultureInfo));
+        // ARRANGE
+        const string script = "BEGIN\r\n    PRINT N'SqlTableDependency: First [a].';\r\n    SELECT 1;\r\n    PRINT N'SqlTableDependency: Second.';\r\nEND";
 
-        return eo;
+        // ACT
+        var result = SqlTableDependency<object>.RemoveLogOperations(script);
+
+        // ASSERT
+        Assert.Equal("BEGIN\r\n    \r\n    SELECT 1;\r\n    \r\nEND", result);
+    }
+
+    [Fact]
+    public void LeavesUnterminatedLogStatementUntouched()
+    {
+        // ARRANGE
+        const string script = "BEGIN PRINT N'SqlTableDependency: never closed";
+
+        // ACT
+        var result = SqlTableDependency<object>.RemoveLogOperations(script);
+
+        // ASSERT
+        Assert.Equal(script, result);
     }
 }

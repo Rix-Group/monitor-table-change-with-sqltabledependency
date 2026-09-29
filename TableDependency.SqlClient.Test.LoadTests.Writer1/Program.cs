@@ -60,7 +60,9 @@ public static class Program
                     break;
 
                 case 2:
-                    sqlCommand.CommandText = "UPDATE [LoadTest] SET [FirstName] = 'cazzarola', [SecondName] = '" + Guid.NewGuid() + "' WHERE [Id] = 1";
+                    sqlCommand.CommandText = "UPDATE [LoadTest] SET [FirstName] = 'cazzarola', [SecondName] = @secondName WHERE [Id] = 1";
+                    sqlCommand.Parameters.Clear();
+                    sqlCommand.Parameters.AddWithValue("@secondName", Guid.NewGuid().ToString());
                     if (await sqlCommand.ExecuteNonQueryAsync() > 0)
                         updatedCnt++;
                     i++;

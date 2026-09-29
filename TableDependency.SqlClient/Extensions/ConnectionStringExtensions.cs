@@ -222,8 +222,9 @@ internal static class ConnectionStringExtensions
             await using var sqlConnection = new SqlConnection(connectionString);
             await sqlConnection.OpenAsync(ct);
 
-            var sqlCommand = sqlConnection.CreateCommand();
-            sqlCommand.CommandText = $"SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE name LIKE N'{prefix}%';";
+            await using var sqlCommand = sqlConnection.CreateCommand();
+            sqlCommand.CommandText = SqlScripts.SelectQueuesWithPrefix;
+            sqlCommand.Parameters.AddWithValue("@prefix", prefix);
             return await sqlCommand.ExecuteScalarAsync(ct) is > 0;
         }
     }

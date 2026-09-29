@@ -42,6 +42,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TableDependency.SqlClient.Base.Enums;
 using TableDependency.SqlClient.Base.EventArgs;
 using TableDependency.SqlClient.Base.Exceptions;
@@ -586,45 +587,38 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         // Messages
         foreach (var message in _processableMessages)
         {
-            sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_message_types WITH (NOLOCK) WHERE name = N'{message}')"
-                + $" CREATE MESSAGE TYPE [{message}] VALIDATION = NONE;";
-            await sqlCommand.ExecuteNonQueryAsync(ct);
+            await PrepareCommand(sqlCommand, SqlScripts.CreateMessageType, ("@message", message)).ExecuteNonQueryAsync(ct);
             LogDebug("Message {Message} created.", ("Message", message));
         }
 
         // Contract
-        var contractBody = string.Join("," + Environment.NewLine, _processableMessages.Select(message => $"[{message}] SENT BY INITIATOR"));
-        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_contracts WITH (NOLOCK) WHERE name = N'{NamingPrefix}')"
-            + $" CREATE CONTRACT [{NamingPrefix}] ({contractBody})";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        var contractMessages = new XElement("m", _processableMessages.Select(message => new XElement("m", message))).ToString(SaveOptions.DisableFormatting);
+        await PrepareCommand(sqlCommand, SqlScripts.CreateContract, ("@contract", NamingPrefix), ("@messages", contractMessages)).ExecuteNonQueryAsync(ct);
         LogDebug("Contract {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Queues (broker schema)
-        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{DefaultBrokerSchemaName}') AND name = N'{NamingPrefix}_Receiver')"
-            + $" CREATE QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        await PrepareCommand(sqlCommand, SqlScripts.CreateQueue, ("@schema", DefaultBrokerSchemaName), ("@queue", $"{NamingPrefix}_Receiver")).ExecuteNonQueryAsync(ct);
         LogDebug("Queue {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
-        sqlCommand.CommandText = $"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(N'{DefaultBrokerSchemaName}') AND name = N'{NamingPrefix}_Sender')"
-            + $" CREATE QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender] WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        await PrepareCommand(sqlCommand, SqlScripts.CreateQueue, ("@schema", DefaultBrokerSchemaName), ("@queue", $"{NamingPrefix}_Sender")).ExecuteNonQueryAsync(ct);
         LogDebug("Queue {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Services
-        sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
-            ? $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Sender')"
-              + $" CREATE SERVICE [{NamingPrefix}_Sender] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender];"
-            : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Sender')"
-              + $" CREATE SERVICE [{NamingPrefix}_Sender] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender];";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        var authorization = string.IsNullOrWhiteSpace(ServiceAuthorization) ? null : ServiceAuthorization;
+        await PrepareCommand(sqlCommand, SqlScripts.CreateService,
+            ("@service", $"{NamingPrefix}_Sender"),
+            ("@authorization", authorization),
+            ("@schema", DefaultBrokerSchemaName),
+            ("@queue", $"{NamingPrefix}_Sender"),
+            ("@contract", null)).ExecuteNonQueryAsync(ct);
         LogDebug("Service broker {NamingPrefix}_Sender created.", (nameof(NamingPrefix), NamingPrefix));
 
-        sqlCommand.CommandText = string.IsNullOrWhiteSpace(ServiceAuthorization)
-            ? $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
-              + $" CREATE SERVICE [{NamingPrefix}_Receiver] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);"
-            : $"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = N'{NamingPrefix}_Receiver')"
-              + $" CREATE SERVICE [{NamingPrefix}_Receiver] AUTHORIZATION [{ServiceAuthorization}] ON QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver] ([{NamingPrefix}]);";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        await PrepareCommand(sqlCommand, SqlScripts.CreateService,
+            ("@service", $"{NamingPrefix}_Receiver"),
+            ("@authorization", authorization),
+            ("@schema", DefaultBrokerSchemaName),
+            ("@queue", $"{NamingPrefix}_Receiver"),
+            ("@contract", NamingPrefix)).ExecuteNonQueryAsync(ct);
         LogDebug("Service broker {NamingPrefix}_Receiver created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Activation Store Procedure
@@ -635,8 +629,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         // If persisted mode is enabled, don't include drop-all logic in the activation procedure
         var dropAllScript = _persisted ? string.Empty : PrepareScriptDropAll(dropMessages, false);
 
-        sqlCommand.CommandText = PrepareScriptProcedureQueueActivation(dropAllScript);
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        await PrepareCommand(sqlCommand, PrepareScriptProcedureQueueActivation(dropAllScript)).ExecuteNonQueryAsync(ct);
         LogDebug("Procedure {NamingPrefix} created.", (nameof(NamingPrefix), NamingPrefix));
 
         // Begin conversation
@@ -649,16 +642,20 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         // Trigger
         await CreateTriggerAsync(sqlCommand, ct);
 
-        // Associate Activation Store Procedure to sender queue
-        sqlCommand.CommandText = $"ALTER QUEUE [{DefaultBrokerSchemaName}].[{NamingPrefix}_Sender] WITH ACTIVATION (PROCEDURE_NAME = [{DefaultBrokerSchemaName}].[{NamingPrefix}_QueueActivationSender], MAX_QUEUE_READERS = 1, EXECUTE AS {QueueExecuteAs.ToUpper()}, STATUS = ON);";
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+        // Associate Activation Store Procedure to sender queue. Quoted names stay distinct from SELF and OWNER keywords.
+        var (executeAs, executeAsIsQuoted) = NormalizeQueueExecuteAs(QueueExecuteAs);
+        await PrepareCommand(sqlCommand, SqlScripts.ActivateQueue,
+            ("@schema", DefaultBrokerSchemaName),
+            ("@queue", $"{NamingPrefix}_Sender"),
+            ("@procedure", $"{NamingPrefix}_QueueActivationSender"),
+            ("@executeAs", executeAs),
+            ("@executeAsIsQuoted", executeAsIsQuoted)).ExecuteNonQueryAsync(ct);
         LogDebug("Associated Activation Store Procedure to sender queue.");
 
         // Run the watch-dog
         if (!_persisted)
         {
-            sqlCommand.CommandText = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = " + watchdogTimeout + ";";
-            await sqlCommand.ExecuteNonQueryAsync(ct);
+            await PrepareCommand(sqlCommand, SqlScripts.BeginConversationTimer, ("@handle", _conversationHandle), ("@timeout", watchdogTimeout)).ExecuteNonQueryAsync(ct);
             LogDebug("Watch dog started.");
         }
 
@@ -676,13 +673,9 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         await using var sqlConnection = new SqlConnection(_connectionString);
         await sqlConnection.OpenAsync(ct);
 
-        // Prefer an active initiator conversation so offline messages remain readable on restart.
-        await using var sqlCommand = sqlConnection.CreateCommand();
-        sqlCommand.CommandText = "SELECT TOP(1) conversation_handle FROM sys.conversation_endpoints WITH (NOLOCK)"
-            + " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')"
-            + " AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);";
-        sqlCommand.Parameters.AddWithValue("@farService", $"{NamingPrefix}_Receiver");
-        sqlCommand.Parameters.AddWithValue("@localService", $"{NamingPrefix}_Sender");
+        await using var sqlCommand = PrepareCommand(sqlConnection.CreateCommand(), SqlScripts.SelectActiveInitiatorConversation,
+            ("@farService", $"{NamingPrefix}_Receiver"),
+            ("@localService", $"{NamingPrefix}_Sender"));
 
         if (await sqlCommand.ExecuteScalarAsync(ct) is Guid handle)
             _conversationHandle = handle;
@@ -935,14 +928,34 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     private async Task<Guid> BeginConversationAsync(SqlCommand sqlCommand, CancellationToken ct)
     {
-        sqlCommand.Parameters.Clear();
-        sqlCommand.CommandText = $"DECLARE @h AS UNIQUEIDENTIFIER; BEGIN DIALOG CONVERSATION @h FROM SERVICE [{NamingPrefix}_Sender] TO SERVICE '{NamingPrefix}_Receiver' ON CONTRACT [{NamingPrefix}] WITH ENCRYPTION = OFF; SELECT @h;";
-        var o = await sqlCommand.ExecuteScalarAsync(ct);
-        var conversationHandler = (Guid)o;
-        if (conversationHandler == Guid.Empty)
-            throw new ServiceBrokerConversationHandlerInvalidException();
+        var result = await PrepareCommand(sqlCommand, SqlScripts.BeginConversation,
+            ("@sender", $"{NamingPrefix}_Sender"),
+            ("@receiver", $"{NamingPrefix}_Receiver"),
+            ("@contract", NamingPrefix)).ExecuteScalarAsync(ct);
 
-        return conversationHandler;
+        return result is Guid conversationHandler && conversationHandler != Guid.Empty
+            ? conversationHandler
+            : throw new ServiceBrokerConversationHandlerInvalidException();
+    }
+
+    private static SqlCommand PrepareCommand(SqlCommand sqlCommand, string commandText, params ReadOnlySpan<(string Name, object? Value)> parameters)
+    {
+        sqlCommand.Parameters.Clear();
+        sqlCommand.CommandText = commandText;
+        foreach (var (name, value) in parameters)
+            sqlCommand.Parameters.AddWithValue(name, value ?? DBNull.Value);
+
+        return sqlCommand;
+    }
+
+    private static (string Value, bool IsQuoted) NormalizeQueueExecuteAs(string queueExecuteAs)
+    {
+        var value = queueExecuteAs.Trim();
+        var isQuoted = value.Length >= 2 && value[0] is '\'' && value[^1] is '\'';
+
+        return isQuoted
+            ? (value[1..^1].Replace("''", "'", StringComparison.Ordinal), true)
+            : (value, false);
     }
 
     private string CreateWhereCondition(bool prependSpace = false)
@@ -988,23 +1001,28 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             : RemoveLogOperations(script);
     }
 
-    private static string RemoveLogOperations(string source)
+    internal static string RemoveLogOperations(string source)
     {
+        const string logStart = "PRINT N'SqlTableDependency:";
+        const string logEnd = ".';";
+
+        var result = new StringBuilder(source.Length);
+        var position = 0;
         while (true)
         {
-            var startPos = source.IndexOf("PRINT N'SqlTableDependency:", StringComparison.InvariantCultureIgnoreCase);
+            var startPos = source.IndexOf(logStart, position, StringComparison.InvariantCultureIgnoreCase);
             if (startPos < 1)
                 break;
 
-            var endPos = source.IndexOf(".';", startPos, StringComparison.InvariantCultureIgnoreCase);
+            var endPos = source.IndexOf(logEnd, startPos, StringComparison.InvariantCultureIgnoreCase);
             if (endPos < 1)
                 break;
 
-            endPos += ".';".Length;
-            source = source[..startPos] + source[endPos..];
+            result.Append(source, position, startPos - position);
+            position = endPos + logEnd.Length;
         }
 
-        return source;
+        return result.Append(source, position, source.Length - position).ToString();
     }
 
     private static string Spacer(int numberOfSpaces)
