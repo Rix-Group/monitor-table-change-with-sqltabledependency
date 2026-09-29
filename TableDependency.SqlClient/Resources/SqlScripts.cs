@@ -204,4 +204,60 @@ END";
             SELECT 1;
             {4}
         END";
+
+    // DDL identifiers cannot be bound as parameters, so each name arrives as one and is QUOTENAME'd into dynamic SQL.
+    // QUOTENAME yields NULL for a name over 128 characters, which sp_executesql would silently skip, hence the guard.
+    private const string ThrowOnNullSql = @"
+        IF @sql IS NULL THROW 50000, N'SqlTableDependency: object name exceeds 128 characters.', 1;
+        EXEC sp_executesql @sql;";
+
+    // @message = message type name.
+    public const string CreateMessageType = @"IF NOT EXISTS (SELECT 1 FROM sys.service_message_types WITH (NOLOCK) WHERE name = @message)
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX) = N'CREATE MESSAGE TYPE ' + QUOTENAME(@message) + N' VALIDATION = NONE;';" + ThrowOnNullSql + @"
+    END";
+
+    // @contract = contract name; @messages = <m><m>name</m>...</m>, one element per message type sent by the initiator.
+    public const string CreateContract = @"IF NOT EXISTS (SELECT 1 FROM sys.service_contracts WITH (NOLOCK) WHERE name = @contract)
+    BEGIN
+        DECLARE @xml XML = @messages;
+        DECLARE @body NVARCHAR(MAX) = STUFF((
+            SELECT N', ' + QUOTENAME(t.m.value('.', 'sysname')) + N' SENT BY INITIATOR'
+            FROM @xml.nodes('/m/m') AS t(m)
+            FOR XML PATH(''), TYPE).value('.', 'nvarchar(max)'), 1, 2, N'');
+        DECLARE @sql NVARCHAR(MAX) = N'CREATE CONTRACT ' + QUOTENAME(@contract) + N' (' + @body + N');';" + ThrowOnNullSql + @"
+    END";
+
+    // @schema = broker schema; @queue = queue name.
+    public const string CreateQueue = @"IF NOT EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(@schema) AND name = @queue)
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX) = N'CREATE QUEUE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@queue)
+            + N' WITH STATUS = ON, RETENTION = OFF, POISON_MESSAGE_HANDLING (STATUS = OFF);';" + ThrowOnNullSql + @"
+    END";
+
+    // @service = service name; @authorization = owner or NULL; @schema/@queue = its queue; @contract = contract or NULL (initiator side).
+    public const string CreateService = @"IF NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = @service)
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX) = N'CREATE SERVICE ' + QUOTENAME(@service)
+            + CASE WHEN @authorization IS NULL THEN N'' ELSE N' AUTHORIZATION ' + QUOTENAME(@authorization) END
+            + N' ON QUEUE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@queue)
+            + CASE WHEN @contract IS NULL THEN N'' ELSE N' (' + QUOTENAME(@contract) + N')' END + N';';" + ThrowOnNullSql + @"
+    END";
+
+    // @schema = broker schema; @queue = sender queue; @procedure = activation procedure; @executeAs = SELF, OWNER or a user name.
+    public const string ActivateQueue = @"DECLARE @sql NVARCHAR(MAX) = N'ALTER QUEUE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@queue)
+        + N' WITH ACTIVATION (PROCEDURE_NAME = ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@procedure)
+        + N', MAX_QUEUE_READERS = 1, EXECUTE AS '
+        + CASE WHEN UPPER(@executeAs) IN (N'SELF', N'OWNER') THEN UPPER(@executeAs) ELSE QUOTENAME(@executeAs, N'''') END
+        + N', STATUS = ON);';" + ThrowOnNullSql;
+
+    // @sender/@receiver = services; @contract = contract name. Returns the new conversation handle.
+    public const string BeginConversation = @"DECLARE @h UNIQUEIDENTIFIER;
+        DECLARE @sql NVARCHAR(MAX) = N'BEGIN DIALOG CONVERSATION @h FROM SERVICE ' + QUOTENAME(@sender)
+            + N' TO SERVICE @receiver ON CONTRACT ' + QUOTENAME(@contract) + N' WITH ENCRYPTION = OFF;';
+        IF @sql IS NULL THROW 50000, N'SqlTableDependency: object name exceeds 128 characters.', 1;
+        EXEC sp_executesql @sql, N'@h UNIQUEIDENTIFIER OUTPUT, @receiver NVARCHAR(256)', @h OUTPUT, @receiver;
+        SELECT @h;";
+
+    public const string BeginConversationTimer = "BEGIN CONVERSATION TIMER (@handle) TIMEOUT = @timeout;";
 }

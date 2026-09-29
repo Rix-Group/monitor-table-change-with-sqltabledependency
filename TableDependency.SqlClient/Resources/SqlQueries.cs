@@ -100,4 +100,11 @@ ORDER BY i.is_primary_key DESC, i.is_unique DESC, i.index_id, ic.key_ordinal";
     [CONTROL ON BROKER SCHEMA]    = HAS_PERMS_BY_NAME(@brokerSchema, 'SCHEMA', 'CONTROL'),
     [ALTER ON TABLE]      = HAS_PERMS_BY_NAME(@table, 'OBJECT', 'ALTER'),
     [SELECT ON TABLE]     = HAS_PERMS_BY_NAME(@table, 'OBJECT', 'SELECT');";
+
+    public const string SelectQueuesWithPrefix = "SELECT COUNT(*) FROM sys.service_queues WITH (NOLOCK) WHERE name LIKE @prefix + N'%';";
+
+    // Prefer an active initiator conversation so offline messages remain readable on restart.
+    public const string SelectActiveInitiatorConversation = @"SELECT TOP(1) conversation_handle FROM sys.conversation_endpoints WITH (NOLOCK)
+    WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')
+    AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);";
 }
