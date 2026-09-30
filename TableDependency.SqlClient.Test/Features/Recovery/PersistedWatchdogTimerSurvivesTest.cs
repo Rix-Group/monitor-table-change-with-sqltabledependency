@@ -35,7 +35,6 @@ namespace TableDependency.SqlClient.Test.Features.Recovery;
 public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture) : SqlTableDependencyBaseTest(databaseFixture)
 {
     private const string TableName = nameof(PersistedWatchdogTimerSurvivesTest);
-    private const string TimerArmMarkerTableName = $"{TableName}_TimerArmMarker";
 
     private sealed class Model
     {
@@ -54,9 +53,6 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
 
         sqlCommand.CommandText = $"CREATE TABLE [{TableName}] ([Id] INT IDENTITY(1, 1) NOT NULL PRIMARY KEY, [Name] NVARCHAR(100) NOT NULL);";
         await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-
-        sqlCommand.CommandText = $"IF OBJECT_ID('{TimerArmMarkerTableName}', 'U') IS NOT NULL DROP TABLE [{TimerArmMarkerTableName}]; CREATE TABLE [{TimerArmMarkerTableName}] ([ConversationHandle] UNIQUEIDENTIFIER NOT NULL);";
-        await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
     }
 
     public override async ValueTask DisposeAsync()
@@ -66,9 +62,6 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
 
         await using var sqlCommand = sqlConnection.CreateCommand();
         sqlCommand.CommandText = $"IF OBJECT_ID('{TableName}', 'U') IS NOT NULL DROP TABLE [{TableName}];";
-        await sqlCommand.ExecuteNonQueryAsync(CancellationToken.None);
-
-        sqlCommand.CommandText = $"IF OBJECT_ID('{TimerArmMarkerTableName}', 'U') IS NOT NULL DROP TABLE [{TimerArmMarkerTableName}];";
         await sqlCommand.ExecuteNonQueryAsync(CancellationToken.None);
     }
 
@@ -150,32 +143,55 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
     }
 
     [Fact]
-    public async Task PersistedTimerArm_IgnoresConversationClosedAfterLookup()
+    public async Task PersistedListener_SurvivesConversationClosedBetweenLookupAndTimerArm()
     {
         SqlTableDependency<Model>? tableDependency = null;
+        var inserted = new TaskCompletionSource<Model>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var statuses = new List<TableDependencyStatus>();
+        Exception? listenerException = null;
 
         try
         {
             // ARRANGE
-            var persistentId = $"timer_lock_{Guid.NewGuid():N}";
+            var persistentId = $"timer_race_{Guid.NewGuid():N}";
             tableDependency = await SqlTableDependency<Model>.CreateSqlTableDependencyAsync(
                 DependencyConnectionString,
                 tableName: TableName,
                 persistentId: persistentId,
                 ct: TestContext.Current.CancellationToken);
-            tableDependency.OnChanged += _ => { };
+            tableDependency.OnChanged += e => inserted.TrySetResult(e.Entity);
+            tableDependency.OnStatusChanged += e => statuses.Add(e.Status);
+            tableDependency.OnExceptionAsync = e => { listenerException = e.Exception; return Task.CompletedTask; };
 
             await tableDependency.StartAsync(timeout: 60, watchdogTimeout: 120, ct: TestContext.Current.CancellationToken);
             var naming = tableDependency.NamingPrefix;
 
+            // Hold the persisted dialog's lock so the listener's next timer arm blocks after its handle lookup.
+            await using var blocker = new SqlConnection(ConnectionString);
+            await blocker.OpenAsync(TestContext.Current.CancellationToken);
+            await using var transaction = (SqlTransaction)await blocker.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            var conversationHandle = await LockPersistedConversationAsync(blocker, transaction, naming, TestContext.Current.CancellationToken);
+
             // ACT
-            var timerArm = ArmPersistedConversationTimerAsync(naming, TestContext.Current.CancellationToken);
-            var conversationHandle = await WaitForTimerArmLookupAsync(TestContext.Current.CancellationToken);
-            var endConversation = EndConversationAsync(conversationHandle, TestContext.Current.CancellationToken);
+            await WaitForListenerTimerArmBlockedAsync(blocker, transaction, TestContext.Current.CancellationToken);
+            await EndConversationAsync(blocker, transaction, conversationHandle, TestContext.Current.CancellationToken);
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+            // The failed arm is statement-level, so the batch still enters WAITFOR; an INSERT ends it and surfaces any error.
+            await using var sqlConnection = new SqlConnection(ConnectionString);
+            await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var sqlCommand = sqlConnection.CreateCommand();
+            sqlCommand.CommandText = $"INSERT INTO [{TableName}] ([Name]) VALUES ('after-timer-race');";
+            await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+
+            var delivered = await Task.WhenAny(inserted.Task, Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)) == inserted.Task;
+            await Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
 
             // ASSERT
-            await timerArm;
-            await endConversation;
+            Assert.True(delivered, $"Listener should keep delivering after the timer-arm race. Statuses: [{string.Join(", ", statuses)}]; ex={listenerException?.Message}");
+            Assert.Equal("after-timer-race", (await inserted.Task).Name);
+            Assert.Null(listenerException);
+            Assert.DoesNotContain(TableDependencyStatus.StopDueToError, statuses);
             Assert.Equal(TableDependencyStatus.WaitingForNotification, tableDependency.Status);
         }
         finally
@@ -188,52 +204,46 @@ public class PersistedWatchdogTimerSurvivesTest(DatabaseFixture databaseFixture)
         }
     }
 
-    private async Task ArmPersistedConversationTimerAsync(string naming, CancellationToken ct)
+    private static async Task<Guid> LockPersistedConversationAsync(SqlConnection sqlConnection, SqlTransaction transaction, string naming, CancellationToken ct)
     {
-        await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(ct);
-
         await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.Transaction = transaction;
         sqlCommand.CommandText =
             "DECLARE @conversationHandle UNIQUEIDENTIFIER;" +
-            " SELECT TOP(1) @conversationHandle = conversation_handle" +
-            " FROM sys.conversation_endpoints WITH (NOLOCK)" +
-            " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')" +
-            " AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);" +
-            $" INSERT INTO [{TimerArmMarkerTableName}] ([ConversationHandle]) VALUES (@conversationHandle);" +
-            " WAITFOR DELAY '00:00:02';" +
-            " BEGIN TRY BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;" +
-            " END TRY BEGIN CATCH IF ERROR_NUMBER() <> 8426 THROW; END CATCH;";
+            " SELECT TOP(1) @conversationHandle = conversation_handle FROM sys.conversation_endpoints WITH (NOLOCK)" +
+            " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR');" +
+            " BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = 120;" +
+            " SELECT @conversationHandle;";
         sqlCommand.Parameters.AddWithValue("@farService", $"{naming}_Receiver");
-        sqlCommand.Parameters.AddWithValue("@localService", $"{naming}_Sender");
-        sqlCommand.Parameters.AddWithValue("@watchdogTimeout", 120);
-        await sqlCommand.ExecuteNonQueryAsync(ct);
+
+        return (Guid)(await sqlCommand.ExecuteScalarAsync(ct))!;
     }
 
-    private async Task<Guid> WaitForTimerArmLookupAsync(CancellationToken ct)
+    private static async Task WaitForListenerTimerArmBlockedAsync(SqlConnection sqlConnection, SqlTransaction transaction, CancellationToken ct)
     {
-        for (var attempt = 0; attempt < 100; attempt++)
+        // The listener re-arms at the start of each iteration, so the first blocked arm can take up to one WAITFOR timeout.
+        var deadline = DateTime.UtcNow.AddSeconds(90);
+        while (DateTime.UtcNow < deadline)
         {
-            await using var sqlConnection = new SqlConnection(ConnectionString);
-            await sqlConnection.OpenAsync(ct);
             await using var sqlCommand = sqlConnection.CreateCommand();
-            sqlCommand.CommandText = $"SELECT TOP(1) [ConversationHandle] FROM [{TimerArmMarkerTableName}] WITH (NOLOCK);";
+            sqlCommand.Transaction = transaction;
+            sqlCommand.CommandText =
+                "SELECT COUNT(*) FROM sys.dm_exec_requests r CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t" +
+                " WHERE r.blocking_session_id = @@SPID AND t.text LIKE N'%BEGIN CONVERSATION TIMER%WAITFOR (RECEIVE%';";
 
-            if (await sqlCommand.ExecuteScalarAsync(ct) is Guid conversationHandle)
-                return conversationHandle;
+            if ((int)(await sqlCommand.ExecuteScalarAsync(ct))! > 0)
+                return;
 
-            await Task.Delay(TimeSpan.FromMilliseconds(25), ct);
+            await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
         }
 
-        throw new TimeoutException("The timer arm did not select a persisted conversation.");
+        throw new TimeoutException("The listener's timer arm never blocked on the locked persisted conversation.");
     }
 
-    private async Task EndConversationAsync(Guid conversationHandle, CancellationToken ct)
+    private static async Task EndConversationAsync(SqlConnection sqlConnection, SqlTransaction transaction, Guid conversationHandle, CancellationToken ct)
     {
-        await using var sqlConnection = new SqlConnection(ConnectionString);
-        await sqlConnection.OpenAsync(ct);
-
         await using var sqlCommand = sqlConnection.CreateCommand();
+        sqlCommand.Transaction = transaction;
         sqlCommand.CommandText = "END CONVERSATION @conversationHandle;";
         sqlCommand.Parameters.AddWithValue("@conversationHandle", conversationHandle);
         await sqlCommand.ExecuteNonQueryAsync(ct);
