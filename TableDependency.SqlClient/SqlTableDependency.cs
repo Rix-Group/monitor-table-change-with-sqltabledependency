@@ -1054,6 +1054,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             // Arm the conversation timer each loop so an idle dialog eventually fires DialogTimer onto the _Sender queue.
             // The activation procedure then ends that conversation; in persisted mode its drop-all script is empty, so the
             // objects survive while the stale initiator dialog is retired (a non-persistent listener instead drops everything).
+            // Error 8426 is expected if the activation procedure ends the selected persisted dialog before its timer is armed.
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
             var waitForSqlScript = _persisted
                 ? "DECLARE @conversationHandle UNIQUEIDENTIFIER;"
@@ -1061,7 +1062,8 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
                   + " FROM sys.conversation_endpoints WITH (NOLOCK)"
                   + " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')"
                   + " AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);"
-                  + " IF @conversationHandle IS NOT NULL BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;"
+                  + " BEGIN TRY IF @conversationHandle IS NOT NULL BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;"
+                  + " END TRY BEGIN CATCH IF ERROR_NUMBER() <> 8426 THROW; END CATCH;"
                 : "BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;";
             waitForSqlScript += receiveStatement;
 
