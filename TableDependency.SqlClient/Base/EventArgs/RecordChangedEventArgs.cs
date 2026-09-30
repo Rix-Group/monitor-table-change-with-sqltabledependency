@@ -41,6 +41,7 @@ using TableDependency.SqlClient.Extensions;
 
 namespace TableDependency.SqlClient.Base.EventArgs;
 
+// aislop-ignore-next-block complexity/function-too-long -- This public event-argument type keeps decoding and materialization together.
 public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
 {
     #region Instance variables
@@ -67,6 +68,7 @@ public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
     /// Create a record changed event arg for test purposes
     /// </summary>
     /// <param name="cultureInfo">Defaults to current culture</param>
+    // aislop-ignore-next-block complexity/too-many-params -- Public compatibility constructor; all metadata values are independently optional.
     public RecordChangedEventArgs(ChangeType changeType, T entity, T? oldEntity = null, string server = "", string database = "", string sender = "", CultureInfo? cultureInfo = null)
         : base(server, database, sender, cultureInfo ?? CultureInfo.CurrentCulture)
     {
@@ -75,6 +77,7 @@ public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
         OldEntity = oldEntity;
     }
 
+    // aislop-ignore-next-block complexity/too-many-params -- Database message metadata is intentionally supplied as distinct fields.
     public RecordChangedEventArgs(
         MessagesBag messagesBag,
         IModelToTableMapper<T>? mapper,

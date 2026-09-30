@@ -1,3 +1,4 @@
+// aislop-ignore-file complexity/file-too-large -- Partial extraction would fragment the cohesive listener implementation and its private state.
 #region License
 
 // TableDependency, SqlTableDependency
@@ -57,6 +58,7 @@ using TableDependency.SqlClient.Resources;
 
 namespace TableDependency.SqlClient;
 
+// aislop-ignore-next-block complexity/function-too-long -- This type coordinates the listener lifecycle and deliberately owns its state.
 public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class, new()
 {
     #region Public Constants
@@ -185,6 +187,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
     /// <param name="includeOldEntity">if set to <c>true</c>, include old entity.</param>
     /// <param name="persistentId">An id to append to the naming convention that enables queue persistence on restart.</param>
     /// <param name="ct">Cancellation token.</param>
+    // aislop-ignore-next-block complexity/too-many-params -- Preserve the established named-argument construction API.
     public static async Task<SqlTableDependency<T>> CreateSqlTableDependencyAsync(
         string connectionString,
         string? schemaName = null,
@@ -566,6 +569,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         return messages;
     }
 
+    // aislop-ignore-next-block complexity/function-too-long -- The ordered DDL transaction must remain inspectable as one unit.
     private async Task CreateDatabaseObjectsAsync(int watchdogTimeout, CancellationToken ct)
     {
         using var activity = StartActivity(nameof(CreateDatabaseObjectsAsync))
@@ -1032,6 +1036,7 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
 
     #region WaitForNotifications
 
+    // aislop-ignore-next-block complexity/function-too-long -- Receive, notification dispatch, and terminal status handling share one connection lifetime.
     private async Task WaitForNotificationsAsync(
         int timeout,
         int watchdogTimeout,
@@ -1049,8 +1054,18 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
             // Arm the conversation timer each loop so an idle dialog eventually fires DialogTimer onto the _Sender queue.
             // The activation procedure then ends that conversation; in persisted mode its drop-all script is empty, so the
             // objects survive while the stale initiator dialog is retired (a non-persistent listener instead drops everything).
+            // Error 8426 is expected if the activation procedure ends the selected persisted dialog before its timer is armed.
             var receiveStatement = $"WAITFOR (RECEIVE TOP({messageNumber}) [message_type_name], [message_body] FROM [{DefaultBrokerSchemaName}].[{NamingPrefix}_Receiver]), TIMEOUT {timeout * 1000};";
-            var waitForSqlScript = $"BEGIN CONVERSATION TIMER ('{_conversationHandle.ToString().ToUpper()}') TIMEOUT = {watchdogTimeout};" + receiveStatement;
+            var waitForSqlScript = _persisted
+                ? "DECLARE @conversationHandle UNIQUEIDENTIFIER;"
+                  + " SELECT TOP(1) @conversationHandle = conversation_handle"
+                  + " FROM sys.conversation_endpoints WITH (NOLOCK)"
+                  + " WHERE far_service = @farService AND is_initiator = 1 AND state_desc NOT IN ('CLOSED', 'ERROR')"
+                  + " AND service_id = (SELECT service_id FROM sys.services WITH (NOLOCK) WHERE name = @localService);"
+                  + " BEGIN TRY IF @conversationHandle IS NOT NULL BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;"
+                  + " END TRY BEGIN CATCH IF ERROR_NUMBER() <> 8426 THROW; END CATCH;"
+                : "BEGIN CONVERSATION TIMER (@conversationHandle) TIMEOUT = @watchdogTimeout;";
+            waitForSqlScript += receiveStatement;
 
             sqlConnection = new SqlConnection(_connectionString);
 
@@ -1082,6 +1097,14 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
                     await using var sqlCommand = sqlConnection.CreateCommand();
                     sqlCommand.CommandText = waitForSqlScript;
                     sqlCommand.CommandTimeout = 0;
+                    sqlCommand.Parameters.AddWithValue("@watchdogTimeout", watchdogTimeout);
+                    if (_persisted)
+                    {
+                        sqlCommand.Parameters.AddWithValue("@farService", $"{NamingPrefix}_Receiver");
+                        sqlCommand.Parameters.AddWithValue("@localService", $"{NamingPrefix}_Sender");
+                    }
+                    else
+                        sqlCommand.Parameters.AddWithValue("@conversationHandle", _conversationHandle);
                     LogDebug("Executing WAITFOR command.");
 
                     await using var sqlDataReader = await sqlCommand.ExecuteReaderAsync(ct);

@@ -1,4 +1,5 @@
-﻿#region License
+﻿// aislop-ignore-file complexity/file-too-large -- An ExpressionVisitor requires its related overrides and SQL-formatting helpers together.
+#region License
 
 // TableDependency, SqlTableDependency, SqlTableDependencyFilter
 // Copyright (c) 2015-2020 Christian Del Bianco. All rights reserved.
@@ -41,6 +42,7 @@ using TableDependency.SqlClient.Where.Helpers;
 
 namespace TableDependency.SqlClient.Where;
 
+// aislop-ignore-next-block complexity/function-too-long -- The visitor's expression translation state is intentionally localized to this type.
 public sealed class SqlTableDependencyFilter<T> : ExpressionVisitor, ITableDependencyFilter where T : class, new()
 {
     #region Constructors
