@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "PowerShell(git push)",
+      "PowerShell(git push:*)",
+      "mcp__GitKraken__git_push"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-git-push.js\""
+          }
+        ]
+      }
+    ]
+  }
+}
