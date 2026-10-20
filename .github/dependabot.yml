@@ -16,24 +16,8 @@ updates:
       prefix: build
       include: scope
     groups:
-      microsoft:
-        patterns:
-          - Microsoft.*
-          - System.*
-        update-types:
-          - minor
-          - patch
-      aspire:
-        patterns:
-          - Aspire.*
-        update-types:
-          - minor
-          - patch
-      test-stack:
-        patterns:
-          - xunit*
-          - Microsoft.Testing.*
-          - Testcontainers*
+      nuget:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     target-branch: main
