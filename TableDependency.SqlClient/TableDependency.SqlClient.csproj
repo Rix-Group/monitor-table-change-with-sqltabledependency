@@ -28,7 +28,7 @@
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="170.1000.7" />
 
 		<!-- Bump transitive package -->
-		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
 	</ItemGroup>
 
 	<ItemGroup>
