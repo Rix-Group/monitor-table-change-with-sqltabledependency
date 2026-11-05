@@ -269,4 +269,83 @@ END";
         SELECT @h;";
 
     public const string BeginConversationTimer = "BEGIN CONVERSATION TIMER (@handle) TIMEOUT = @timeout;";
+
+    // Repair: returns 0 without ALTER on the database, 1 once enabled. NO_WAIT fails at once rather than killing other sessions (never ROLLBACK IMMEDIATE).
+    // When another database already runs an enabled broker with this one's ID (a restored copy), ENABLE_BROKER fails with 9772 and
+    // NEW_BROKER is the only way back; it ends this database's conversations. The collision is detected up front because, inside
+    // EXEC, the CATCH sees the trailing 5069 ("ALTER DATABASE statement failed"), not 9772. sys.databases is readable via VIEW ANY DATABASE (public).
+    // Issued from master so this session does not itself count against the exclusive access the change needs.
+    public const string EnableBroker = @"SET NOCOUNT ON;
+IF ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'ALTER'), 0) <> 1 BEGIN SELECT 0; RETURN; END
+DECLARE @db NVARCHAR(300) = QUOTENAME(DB_NAME());
+DECLARE @option NVARCHAR(20) = CASE WHEN EXISTS (
+    SELECT 1 FROM sys.databases WITH (NOLOCK)
+    WHERE database_id <> DB_ID() AND is_broker_enabled = 1
+      AND service_broker_guid = (SELECT service_broker_guid FROM sys.databases WITH (NOLOCK) WHERE database_id = DB_ID()))
+    THEN N'NEW_BROKER' ELSE N'ENABLE_BROKER' END;
+EXEC (N'USE [master]; ALTER DATABASE ' + @db + N' SET ' + @option + N' WITH NO_WAIT;');
+SELECT 1;";
+
+    // Repair: CreateQueue is IF NOT EXISTS, so a queue switched off (by hand or by poison handling) is switched back on here.
+    public const string EnableQueue = @"IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = SCHEMA_ID(@schema) AND name = @queue AND (is_receive_enabled = 0 OR is_enqueue_enabled = 0))
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX) = N'ALTER QUEUE ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@queue) + N' WITH STATUS = ON;';" + RaiseOnNullSql + @"
+    END";
+
+    // Repair: CREATE OR ALTER TRIGGER keeps a disabled trigger disabled.
+    public const string EnableTrigger = @"IF EXISTS (SELECT 1 FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(QUOTENAME(@schema) + N'.' + QUOTENAME(@trigger)) AND is_disabled = 1)
+    BEGIN
+        DECLARE @sql NVARCHAR(MAX) = N'ENABLE TRIGGER ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@trigger) + N' ON ' + QUOTENAME(@schema) + N'.' + QUOTENAME(@table) + N';';" + RaiseOnNullSql + @"
+    END";
+
+    // @handle = conversation handle; 1 while the dialog is still usable.
+    public const string ConversationIsOpen = "SELECT CASE WHEN EXISTS (SELECT 1 FROM sys.conversation_endpoints WITH (NOLOCK) WHERE conversation_handle = @handle AND state_desc NOT IN ('CLOSED', 'ERROR')) THEN 1 ELSE 0 END;";
+
+    // WITH CLEANUP posts nothing to the _Sender queue, so retiring a replaced dialog cannot fire the activation procedure's drop-all.
+    public const string EndConversationWithCleanup = "IF EXISTS (SELECT 1 FROM sys.conversation_endpoints WITH (NOLOCK) WHERE conversation_handle = @handle) END CONVERSATION @handle WITH CLEANUP;";
+
+    // Read-only health probe: one row per problem, Kind/Problem spelled as the DatabaseObjectKind/DatabaseObjectProblem names.
+    // Catalog names are only compared with parameters, never concatenated or UNIONed, so the broker catalogs' BIN collation is harmless.
+    // @handle is NULL in persisted mode: the trigger re-begins a dialog itself, so a missing one is not a fault there.
+    public const string SelectDatabaseObjectIssues = @"SET NOCOUNT ON;
+DECLARE @issues TABLE ([Kind] NVARCHAR(32), [Name] NVARCHAR(512), [Problem] NVARCHAR(16));
+DECLARE @brokerSchemaId INT = SCHEMA_ID(@brokerSchema);
+
+IF NOT EXISTS (SELECT 1 FROM sys.databases WITH (NOLOCK) WHERE database_id = DB_ID() AND is_broker_enabled = 1)
+    INSERT INTO @issues VALUES (N'Broker', DB_NAME(), N'Disabled');
+
+DECLARE @triggerDisabled BIT = (SELECT is_disabled FROM sys.triggers WITH (NOLOCK) WHERE object_id = OBJECT_ID(QUOTENAME(@tableSchema) + N'.' + QUOTENAME(@trigger)));
+IF @triggerDisabled IS NULL INSERT INTO @issues VALUES (N'Trigger', @trigger, N'Missing');
+ELSE IF @triggerDisabled = 1 INSERT INTO @issues VALUES (N'Trigger', @trigger, N'Disabled');
+
+INSERT INTO @issues
+SELECT N'Queue', q.[name], CASE WHEN sq.object_id IS NULL THEN N'Missing' ELSE N'Disabled' END
+FROM (VALUES (@receiver), (@sender)) AS q([name])
+LEFT JOIN sys.service_queues sq WITH (NOLOCK) ON sq.schema_id = @brokerSchemaId AND sq.name = q.[name]
+WHERE sq.object_id IS NULL OR sq.is_receive_enabled = 0 OR sq.is_enqueue_enabled = 0;
+
+IF EXISTS (SELECT 1 FROM sys.service_queues WITH (NOLOCK) WHERE schema_id = @brokerSchemaId AND name = @sender AND (is_activation_enabled = 0 OR activation_procedure IS NULL))
+    INSERT INTO @issues VALUES (N'QueueActivation', @sender, N'Disabled');
+
+INSERT INTO @issues
+SELECT N'Service', s.[name], N'Missing'
+FROM (VALUES (@receiver), (@sender)) AS s([name])
+WHERE NOT EXISTS (SELECT 1 FROM sys.services WITH (NOLOCK) WHERE name = s.[name]);
+
+IF NOT EXISTS (SELECT 1 FROM sys.service_contracts WITH (NOLOCK) WHERE name = @contract)
+    INSERT INTO @issues VALUES (N'Contract', @contract, N'Missing');
+
+DECLARE @xml XML = @messages;
+INSERT INTO @issues
+SELECT N'MessageType', t.m.value('.', 'sysname'), N'Missing'
+FROM @xml.nodes('/m/m') AS t(m)
+WHERE NOT EXISTS (SELECT 1 FROM sys.service_message_types WITH (NOLOCK) WHERE name = t.m.value('.', 'sysname'));
+
+IF OBJECT_ID(QUOTENAME(@brokerSchema) + N'.' + QUOTENAME(@procedure), N'P') IS NULL
+    INSERT INTO @issues VALUES (N'Procedure', @procedure, N'Missing');
+
+IF @handle IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.conversation_endpoints WITH (NOLOCK) WHERE conversation_handle = @handle AND state_desc NOT IN ('CLOSED', 'ERROR'))
+    INSERT INTO @issues VALUES (N'Conversation', CONVERT(NVARCHAR(36), @handle), N'Missing');
+
+SELECT [Kind], [Name], [Problem] FROM @issues;";
 }
