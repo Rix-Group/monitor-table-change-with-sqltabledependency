@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-		<Version>10.2.0</Version>
-		<TargetFrameworks>net10.0</TargetFrameworks>
+		<Version>11.0.0</Version>
+		<TargetFrameworks>net10.0;net11.0</TargetFrameworks>
 		<Copyright>Christian Del Bianco © 2015-2020</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -28,7 +28,7 @@
 		<PackageReference Include="Microsoft.SqlServer.Types" Version="170.1000.7" />
 
 		<!-- Bump transitive package -->
-		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
