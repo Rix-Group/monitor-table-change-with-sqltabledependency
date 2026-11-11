@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>9285f157-9bc5-4486-a395-15cc193db49a</UserSecretsId>
@@ -12,12 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.6.4" />
-	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.6.4" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.6.5" />
+	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
 
 	<!-- Bump transitive package -->
 	<PackageReference Include="MessagePack" Version="3.1.12" />
-	<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+	<PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
   </ItemGroup>
 
   <Import Project="..\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames\TableDependency.SqlClient.Test.Aspire.AppHost.ServiceNames.projitems" Label="Shared" />

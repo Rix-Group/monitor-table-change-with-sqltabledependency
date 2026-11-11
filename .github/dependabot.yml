@@ -1,9 +1,12 @@
 # Public NuGet packages only: no private registry or credentials are required.
-# Update this counter to retrigger Dependabot: 1
+# Update this counter to retrigger Dependabot: 2
+# `directories` (not `directory`) so the "nuget" group spans every project in one PR instead of one PR per project folder.
 version: 2
 updates:
   - package-ecosystem: nuget
-    directory: /
+    directories:
+      - "/"
+      - "/*"
     target-branch: main
     schedule:
       interval: daily

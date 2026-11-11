@@ -3,7 +3,7 @@
 ## Project overview
 - SqlTableDependency library for SQL Server table change notifications.
 - Fork of `https://github.com/IsNemoEqualTrue/monitor-table-change-with-sqltabledependency` but on .NET and async support.
-- Main library: `TableDependency.SqlClient/` (net10.0).
+- Main library: `TableDependency.SqlClient/` (multi-targets `net10.0;net11.0`; test projects `net11.0`).
 - Unit tests: `TableDependency.SqlClient.Test/` (xUnit v3, Testcontainers MsSql).
 - Other manual tests live under `TableDependency.SqlClient.Test.*` projects (Aspire AppHost, client, load tests, crash sim), see `RunningTests.md` for local SQL Server details.
 - IDE solution file: `TableDependency.slnx`.
@@ -17,7 +17,7 @@
 - Don't run all tests at once as they take over 20 minutes, just ones added or updated.
 
 ## Notes
-- Target framework is `net10.0`; use a matching SDK.
+- Library targets `net10.0;net11.0`, everything else `net11.0`; building needs the .NET 11 SDK (and the .NET 10 targeting pack, which NuGet restores).
 - Use modern features such as collection expressions, extension blocks, pattern matching, is null, file-scoped namespaces.
 - All files should be formatted in CRLF, except `.github/workflows/*.yml`, which must stay LF:
   Dependabot's github_actions updater matches `uses:` declarations with an LF-only regex and fails
