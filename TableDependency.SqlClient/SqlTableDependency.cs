@@ -1086,7 +1086,11 @@ public sealed class SqlTableDependency<T> : ITableDependency<T> where T : class,
         return userInterestedColumn.Type.ToLowerInvariant() switch
         {
             "binary" or "varbinary" or "timestamp" or "image" => SanitizeVariableName(userInterestedColumn.Name) + oldNameExtension,
-            "float" => $"CONVERT(NVARCHAR(MAX), RTRIM(LTRIM(STR({SanitizeVariableName(userInterestedColumn.Name)}{oldNameExtension}{ConvertFormat(userInterestedColumn)}, 53, 16))))",
+            // Style 3 writes the 17 (float) or 9 (real) significant digits that round-trip; STR(x, 53, 16) kept sixteen fixed decimals.
+            "float" or "real" => $"CONVERT(NVARCHAR(MAX), {SanitizeVariableName(userInterestedColumn.Name)}{oldNameExtension}, 3)",
+
+            // Style 2 keeps money's four decimals; the default style rounds to two.
+            "money" or "smallmoney" => $"CONVERT(NVARCHAR(MAX), {SanitizeVariableName(userInterestedColumn.Name)}{oldNameExtension}, 2)",
             _ => $"CONVERT(NVARCHAR(MAX), {SanitizeVariableName(userInterestedColumn.Name)}{oldNameExtension}{ConvertFormat(userInterestedColumn)})"
         };
     }

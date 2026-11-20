@@ -170,13 +170,13 @@ public class RecordChangedEventArgs<T> : BaseEventArgs where T : class, new()
                     return ulong.Parse(value, CultureInfo);
 
                 case TypeCode.Single:
-                    return float.Parse(value, CultureInfo);
+                    return float.Parse(value, NumberStyles.Float, CultureInfo);
 
                 case TypeCode.Double:
-                    return double.Parse(value, CultureInfo);
+                    return double.Parse(value, NumberStyles.Float, CultureInfo);
 
                 case TypeCode.Decimal:
-                    return decimal.Parse(value, CultureInfo);
+                    return decimal.Parse(value, NumberStyles.Float, CultureInfo);
 
                 case TypeCode.DateTime:
                     return DateTime.Parse(value, CultureInfo);
