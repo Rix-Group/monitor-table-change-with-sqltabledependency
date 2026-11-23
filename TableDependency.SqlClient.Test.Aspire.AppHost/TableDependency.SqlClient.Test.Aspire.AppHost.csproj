@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.6.5" />
-	<PackageReference Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+	<PackageReference Include="Aspire.Hosting.SqlServer" Version="17.0.0" />
 
 	<!-- Bump transitive package -->
 	<PackageReference Include="MessagePack" Version="3.1.12" />
