@@ -260,7 +260,8 @@ public class PersistedDatabaseObjectRecoveryTest(DatabaseFixture databaseFixture
         foreach (var handle in handles)
         {
             sqlCommand.Parameters.Clear();
-            sqlCommand.CommandText = "END CONVERSATION @handle WITH CLEANUP;";
+            // The activation procedure/timer may end the dialog between the lookup and here (8426).
+            sqlCommand.CommandText = "BEGIN TRY END CONVERSATION @handle WITH CLEANUP; END TRY BEGIN CATCH IF ERROR_NUMBER() <> 8426 THROW; END CATCH;";
             sqlCommand.Parameters.AddWithValue("@handle", handle);
             await sqlCommand.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
         }
