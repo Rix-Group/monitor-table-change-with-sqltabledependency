@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+	<PackageReference Include="Microsoft.Data.SqlClient" Version="8.0.0" />
 
 	<!-- Bump transitive package -->
 	<PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
